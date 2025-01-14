@@ -1,13 +1,15 @@
 from langchain_openai import ChatOpenAI
+from services.chat_tools_impl import tools
+from services.chat_tools_pydantic import tools_parse
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 import os
 from typing import List, Dict, AsyncIterator
 import json
 
-async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str = None) -> AsyncIterator[str]:
+async def get_chat_response(messages: List[Dict[str, str]]) -> AsyncIterator[str]:
     """
     获取 OpenAI 聊天模型的流式响应。
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
-    :param system_prompt: 系统提示词（可选），如果提供，会插入到 messages 的最前面
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     # 初始化 LangChain 的 ChatOpenAI
@@ -20,11 +22,12 @@ async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str =
         api_key=os.getenv("ai_api_key"),
         base_url=os.getenv("ai_base_url"),
     )
+
+    # 拥有 tools 列表的对象
+    llm_with_tools = llm.bind_tools(tools)
     
-    # 如果提供了 system_prompt，插入到 messages 的最前面
-    if system_prompt:
-        messages.insert(0, {"role": "system", "content": system_prompt})
-    
+    chain = llm_with_tools | PydanticToolsParser(tools=tools_parse)
+
     # 获取流式响应（同步生成器）
     stream_res = llm.stream(messages, stream_usage=True)
     full = next(stream_res)

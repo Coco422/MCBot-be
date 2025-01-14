@@ -7,7 +7,7 @@ class ChatRequest(BaseModel):
     /chat/train 接口的请求体模型
     """
     user_input: str  # 用户输入的内容
-    if_kb: bool # 是否开启知识库查询
+    if_kb: Optional[bool] = False # 是否开启知识库查询
     question_id: int
     chat_id: Optional[str] = None
     system_prompt: Optional[str] = None  # 系统提示词（可选）

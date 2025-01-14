@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from utils.openai_chat import get_chat_response
 from typing import AsyncIterator
-
+from models.chat import ChatRequest
 # 默认的系统提示词
 DEFAULT_SYSTEM_PROMPT = """
 角色设定：
@@ -32,18 +32,22 @@ DEFAULT_SYSTEM_PROMPT = """
 其余情况你可以和用户进行友好的聊天。
 """
 
-async def chat_with_ai(user_input: str, system_prompt: str = None) -> AsyncIterator[str]:
+async def chat_with_ai(request: ChatRequest, system_prompt: str = None) -> AsyncIterator[str]:
     """
     与 AI 聊天，返回流式响应。
-    :param user_input: 用户输入的内容
+    :param request: 前端发送的内容
     :param system_prompt: 系统提示词（可选），如果未提供，则使用默认的系统提示词
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     try:
-        # 查询是否有
-        # 构造消息列表
+        #TODO 先从内存 map 中 查询是否有历史消息。没有读库获取。
+        # 进行一次持久化（入库），目前不考虑锁的问题，不存在两个相同用户访问同一个会话
+        # 
+
+
+        #TODO 构造消息列表，目前这个不完善
         messages = [
-            {"role": "user", "content": user_input},
+            {"role": "user", "content": request.user_input},
         ]
         # 获取流式响应
         async for chunk in get_chat_response(messages, system_prompt or DEFAULT_SYSTEM_PROMPT):

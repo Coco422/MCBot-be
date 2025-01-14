@@ -6,6 +6,8 @@ from models.question import Question
 from models.law import LawSlice
 from models.chat import ChatRequest
 from models.analysis import AnalysisResponse
+from models.common import ChatIdResponse
+import uuid
 
 # 创建路由器
 api_router = APIRouter(prefix="/api")
@@ -48,3 +50,15 @@ async def analysis(questionid: int = Query(..., description="题目ID")):
         raise e
     except Exception as e:
         raise HTTPException(status_code=5000, detail=str(e))
+    
+@api_router.get("/chatid", response_model=ChatIdResponse)
+async def generate_chat_id():
+    """
+    生成一个唯一的 chat_id 并返回
+    """
+    try:
+        # 生成唯一的 chat_id
+        chat_id = str(uuid.uuid4())
+        return {"chat_id": chat_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
