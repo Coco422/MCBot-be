@@ -1,0 +1,9 @@
+fastapi
+pydantic
+uvicorn
+langchain_openai
+langchain_core
+transformers
+python-dotenv
+psycopg2-binary
+sse_starlette
