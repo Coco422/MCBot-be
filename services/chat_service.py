@@ -40,13 +40,13 @@ async def chat_with_ai(user_input: str, system_prompt: str = None) -> AsyncItera
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     try:
+        # 查询是否有
         # 构造消息列表
         messages = [
             {"role": "user", "content": user_input},
         ]
-        
         # 获取流式响应
         async for chunk in get_chat_response(messages, system_prompt or DEFAULT_SYSTEM_PROMPT):
             yield chunk
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI 模块错误，请联系管理员: {str(e)}")
+        raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")

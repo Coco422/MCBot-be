@@ -32,17 +32,8 @@ async def chat_train(request: ChatRequest):
     SSE 接口，用于学习时与 AI 聊天。
     """
     try:
-         # 构造完整的用户输入
-        user_input = f"""
-        相关法条：{request.lows if request.lows else "无"},
-        题目内容：{request.question if request.question else "无"},
-        题目选项：{request.options if request.options else "无"},
-        用户提问：{request.user_input}
-        """
-
         # 返回 StreamingResponse
-        return StreamingResponse(content = chat_with_ai(user_input),
-                                  media_type="text/event-stream",)
+        return StreamingResponse(content = chat_with_ai(request),media_type="text/event-stream",)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
