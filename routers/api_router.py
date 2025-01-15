@@ -17,9 +17,18 @@ api_router = APIRouter(prefix="/api")
 @api_router.get("/randomquestion", response_model=Question)
 async def random_question():
     try:
-        return get_random_question()
+        return get_random_question(999999)
     except Exception as e:
         raise HTTPException(status_code=5000, detail=str(e))
+
+# 返回指定题目接口
+@api_router.get("/query_question_by_id", response_model=Question)
+async def random_question(questionid: int = Query(..., description="题目ID")):
+    try:
+        return get_random_question(questionid)
+    except Exception as e:
+        raise HTTPException(status_code=5000, detail=str(e))
+    
 
 # 题目对应法条切片接口
 @api_router.get("/lows", response_model=list[LawSlice])

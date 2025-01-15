@@ -47,14 +47,16 @@ def get_law_slices_by_question_id(question_id: int) -> list[LawSlice]:
             release_db_connection(connection)
 
 
-def get_random_question() -> Question:
+def get_random_question(question_id: int) -> Question:
     """
-    随机获取一道题目
+    获取一道题目
+    when question_id == 999999. will give a random id to query db
     """
     connection = None
     try:
-        # 随机选择一个题号
-        question_id = random.choice(QUESTION_IDS)
+        if(question_id==999999):
+            # 随机选择一个题号
+            question_id = random.choice(QUESTION_IDS)
 
         # 获取数据库连接
         connection = get_db_connection()

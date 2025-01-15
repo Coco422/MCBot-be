@@ -1,7 +1,12 @@
 from fastapi import HTTPException
-from utils.openai_chat import get_chat_response_stream
+
+from utils.openai_chat import get_chat_response_stream, get_chat_response_stream_oai
+from services.tobacco_study import get_random_question, get_law_slices_by_question_id
+from models.question import Question
+from models.law import LawSlice
 from database.connection import get_db_connection, release_db_connection
-from typing import AsyncIterator
+
+from typing import AsyncIterator, List
 from models.chat import ChatRequest
 import uuid
 import json
@@ -11,7 +16,7 @@ from psycopg2.extras import Json
 chat_history_map = {}
 
 # 默认的系统提示词
-DEFAULT_SYSTEM_PROMPT = """
+DEFAULT_SYSTEM_PROMPT = """\
 角色设定：
 你是一位专业的烟草培训系统学习助手，专门为用户提供烟草行业相关的法律法规知识、解答用户在学习过程中遇到的疑问，并辅助用户完成相关题目。你具备丰富的烟草行业知识，熟悉国内外烟草行业的法律法规、政策文件以及行业标准。你的任务是帮助用户更好地理解和掌握烟草行业的相关知识，提升用户的学习效率和专业水平。
 主要功能：
@@ -26,9 +31,16 @@ DEFAULT_SYSTEM_PROMPT = """
 4. 知识扩展：在解答用户问题的同时，你可以提供相关的背景知识、案例分析或行业动态，帮助用户更深入地理解问题。
 用户询问格式：
 "
-相关法条:法条内容,
+相关法条:
+```markdown
+### 法律名称: 法律A
+- **章节**: 第一章
+- **条款内容**: 这是法律A的第一章内容。
+- **相似度**: 0.95
+```
 题目内容:题目内容,
 题目选项:选项，单选、多选、判断,
+正确答案:答案,
 用户提问:用户的输入
 "
 注意：
@@ -92,6 +104,10 @@ def get_chat_history(chat_id):
             chat_history_map[chat_id] = messages
         return messages
 
+def get_chat_id_from_db(user_id):
+    #TODO
+    pass
+
 def add_message_to_chat(chat_id, role, content):
     """向对话历史中添加消息"""
     if chat_id not in chat_history_map:
@@ -99,6 +115,15 @@ def add_message_to_chat(chat_id, role, content):
     chat_history_map[chat_id].append({"role": role, "content": content})
     # 同步到数据库
     save_to_db(chat_id, chat_history_map[chat_id])
+
+def format_to_markdown(law_slices: List[LawSlice]) -> str:
+    markdown_str = ""
+    for law in law_slices:
+        markdown_str += f"### 法律名称: {law.law_name}\n"
+        markdown_str += f"- **章节**: {law.chapter}\n"
+        markdown_str += f"- **条款内容**: {law.article_content}\n"
+        markdown_str += f"- **相似度**: {law.similarity:.2f}\n\n"
+    return markdown_str
 
 async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
     """
@@ -108,34 +133,39 @@ async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     try:
-        #TODO 先从内存 map 中 查询是否有历史消息。没有读库获取。
-        # 进行一次持久化（入库），目前不考虑锁的问题，不存在两个相同用户访问同一个会话
-        # 
-        # 获取或创建 chat_id
+        # 获取 chat_id
         chat_id = request.chat_id
 
+        # 判断是否开启 RAG
+        #TODO 目前 RAG 为 fake RAG
+        if request.if_kb:
+            print("now we are in RAG chat")
+            q1: Question = get_random_question(request.question_id)
+            l1: list[LawSlice] = get_law_slices_by_question_id(request.question_id)
+            user_input_with_kb = f"""
+相关法条:{format_to_markdown(l1)},
+题目内容:{q1.q_stem},
+题目选项:{q1.options},
+正确答案:{q1.answer},
+用户提问:{request.user_input}
+"""
+            finally_input = user_input_with_kb
+        else:
+            finally_input = request.user_input
+        add_message_to_chat(chat_id, "user", request.user_input)
         # 加载历史消息
         history = get_chat_history(chat_id)
 
         # 构造消息列表
         messages = history.copy()  # 复制历史消息
-        messages.append({"role": "user", "content": request.user_input})  # 添加当前用户输入
-
-        # 保存用户输入到历史记录
-        add_message_to_chat(chat_id, "user", request.user_input)
+        messages.append({"role": "user", "content": finally_input})  # 添加当前用户输入
 
         # 获取流式响应
-        async for chunk in get_chat_response_stream(messages,system_prompt=DEFAULT_SYSTEM_PROMPT):
+        #TODO 缺少 usage
+        async for chunk in get_chat_response_stream_oai(messages,system_prompt=DEFAULT_SYSTEM_PROMPT):
             yield chunk
-        full_response = chunk
-        # 解析 AI 的完整回复
-        data_start = full_response.find("data: ") + len("data: ")
-        data_end = full_response.find("\n", data_start)
-        data_str = full_response[data_start:data_end].strip()
-        data_dict = json.loads(data_str)
-
         # 保存 AI 回复到历史记录
-        add_message_to_chat(request.chat_id, "assistant", data_dict["content"])
+        # add_message_to_chat(request.chat_id, "assistant", full_response["content"])
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
     

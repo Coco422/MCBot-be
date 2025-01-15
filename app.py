@@ -1,10 +1,11 @@
 from dotenv import load_dotenv
 # 在程序启动时加载 .env 文件
 load_dotenv()
-
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
-import uvicorn
 from routers.api_router import api_router
+from routers.dev_router import dev_router
 from fastapi.middleware.cors import CORSMiddleware
 
 # 初始化 FastAPI 应用
@@ -22,6 +23,13 @@ app.add_middleware(
 # 将路由器添加到应用
 app.include_router(api_router)
 
-if __name__ == "__main__":
+# 开发路由
+app.include_router(dev_router)
 
-    uvicorn.run(app, host="0.0.0.0", port=5575)
+# 挂载静态文件目录到根路径
+app.mount("/", StaticFiles(directory="html", html=True), name="static")
+
+if __name__ == "__main__":
+    import uvicorn
+    # uvicorn.run(app, host="0.0.0.0", port=5575, ssl_certfile='./cert.pem', ssl_keyfile='./key.pem') # not useful
+    uvicorn.run(app, host="0.0.0.0", port=6688)
