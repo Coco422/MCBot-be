@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Query, HTTPException, Response
+from fastapi import APIRouter, Query, HTTPException, Response, File, UploadFile
 from fastapi.responses import StreamingResponse
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id, get_analysis_by_question_id
-from services.chat_service import chat_with_ai,text_to_speech,create_chat_id
+from services.chat_service import chat_with_ai, text_to_speech, speech_to_text , create_chat_id
 from models.question import Question
 from models.law import LawSlice
 from models.chat import ChatRequest
@@ -39,6 +39,22 @@ async def chat_train(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+@api_router.post("/tts")
+async def generate_tts(request: TTSRequest):
+    """
+    生成文字转语音
+
+    - **tts_text**: 需要转换为语音的文本
+    - **返回**: 语音数据 (audio/mpeg)
+    """
+    try:
+        #TODO 暂未完成自定义说话人等
+
+        audio_data = await text_to_speech(request.tts_text)
+        return Response(content=audio_data, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/analysis", response_model=AnalysisResponse)
 async def analysis(questionid: int = Query(..., description="题目ID")):
     """
@@ -63,16 +79,23 @@ async def generate_chat_id():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@api_router.post("/tts")
-async def generate_tts(request: TTSRequest):
-    """
-    生成文字转语音
-    """
+@api_router.post("/asr", summary="语音转文本", description="上传音频文件并返回识别后的文本")
+async def transcribe_audio(file: UploadFile = File(...)):
     try:
-        #TODO 暂未完成自定义说话人等
+        # 检查文件类型
+        if not file.content_type.startswith("audio/"):
+            raise HTTPException(status_code=400, detail="仅支持音频文件")
 
-        audio_data = await text_to_speech(request.tts_text)
-        return Response(content=audio_data, media_type="audio/mpeg")
+        # 读取文件内容
+        file_content = await file.read()
+
+        # 调用 services 模块中的 speech_to_text 函数
+        text_result = await speech_to_text(file_content, file.filename)
+
+        # 返回识别结果
+        return {"text": text_result}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+

@@ -4,6 +4,7 @@ from database.connection import get_db_connection, release_db_connection
 from typing import AsyncIterator
 from models.chat import ChatRequest
 from openai import AsyncOpenAI
+import aiohttp
 import uuid
 import os
 import json
@@ -159,4 +160,51 @@ async def text_to_speech(tts_text: str) -> bytes:
         return response.content
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS service error: {str(e)}")
-    
+
+async def speech_to_text(file_content: bytes, filename: str) -> str:
+    # print("1. 开始调用 speech_to_text 函数")
+    # print(f"2. 文件名: {filename}, 文件大小: {len(file_content)} 字节")
+
+    url = os.getenv("asr_url")
+    key = os.getenv("asr_key")
+    headers = {
+        "Authorization": "Bearer "+key,
+    }
+
+    # print("3. 构建 multipart/form-data 请求体")
+    data = aiohttp.FormData()
+    data.add_field('file', file_content, filename=filename, content_type='audio/wav')
+    data.add_field('model', os.getenv("asr_model"))
+
+    # print("4. 准备发起 API 请求")
+    # print(f"5. 请求 URL: {url}")
+    # print(f"6. 请求头: {headers}")
+    # print(f"7. 请求体: {data}")
+
+    try:
+        # print("8. 创建 aiohttp.ClientSession")
+        async with aiohttp.ClientSession() as session:
+            # print("9. 发起 POST 请求")
+            async with session.post(url, headers=headers, data=data) as response:
+                # print(f"10. 请求完成，状态码: {response.status}")
+
+                if response.status == 200:
+                    # print("11. 请求成功，解析响应")
+                    result = await response.json()
+                    # print(f"12. 响应内容: {result}")
+                    return result.get("text", "")
+                else:
+                    # print("13. 请求失败，打印错误信息")
+                    error_detail = await response.text()
+                    # print(f"14. 错误详情: {error_detail}")
+                    raise HTTPException(status_code=response.status, detail=f"API 请求失败: {error_detail}")
+
+    except aiohttp.ClientError as e:
+        # print("15. 捕获到 aiohttp.ClientError 异常")
+        # print(f"16. 异常详情: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"网络请求失败: {str(e)}")
+
+    except Exception as e:
+        # print("17. 捕获到未知异常")
+        # print(f"18. 异常详情: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"未知错误: {str(e)}")
