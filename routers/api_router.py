@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Query, HTTPException, Response, File, UploadFile
 from fastapi.responses import StreamingResponse
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id, get_analysis_by_question_id
-from services.chat_service import chat_with_ai, text_to_speech, speech_to_text , create_chat_id
+from services.chat_service import chat_with_ai, create_chat_id
+from services.voice_service import text_to_speech, speech_to_text, clone_voice
 from models.question import Question
 from models.law import LawSlice
 from models.chat import ChatRequest
 from models.analysis import AnalysisResponse
-from models.common import ChatIdResponse, TTSRequest
+from models.common import ChatIdResponse, TTSRequest, VoiceCloneRequest
 
 
 # 创建路由器
@@ -98,4 +99,19 @@ async def transcribe_audio(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@api_router.post("/clone-voice",  summary="克隆用户音色生成对应音频")
+async def clone_voice_endpoint(request: VoiceCloneRequest):
+    """
+    上传用户录音文件、自定义名称和参考文本，用于预置音色。
+    - **custom_name**: Optional[str] = "MCBotDEMO"用户自定义的音频名称
+    - **reference_text**: 参考音频的文字内容
+    - **base64_audio**: base64 编码的音频数据
+    - **tts_text**: str # 目标生成的文字
+    """
+    try:
+        audio_data = await clone_voice(request)
+        return Response(content=audio_data, media_type="audio/mpeg")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
