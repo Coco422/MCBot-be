@@ -7,3 +7,4 @@ transformers
 python-dotenv
 psycopg2-binary
 sse_starlette
+openai

@@ -6,7 +6,7 @@ import os
 from typing import List, Dict, AsyncIterator
 import json
 
-async def get_chat_response(messages: List[Dict[str, str]]) -> AsyncIterator[str]:
+async def get_chat_response_stream(messages: List[Dict[str, str]]) -> AsyncIterator[str]:
     """
     获取 OpenAI 聊天模型的流式响应。
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
@@ -26,7 +26,7 @@ async def get_chat_response(messages: List[Dict[str, str]]) -> AsyncIterator[str
     # 拥有 tools 列表的对象
     llm_with_tools = llm.bind_tools(tools)
     
-    chain = llm_with_tools | PydanticToolsParser(tools=tools_parse)
+    
 
     # 获取流式响应（同步生成器）
     stream_res = llm.stream(messages, stream_usage=True)

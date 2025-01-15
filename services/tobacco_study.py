@@ -71,7 +71,7 @@ def get_random_question() -> Question:
 
         if not result:
             raise Exception("未找到对应的题目")
-        print(result)
+        # print(result)
         # 返回题目数据
         return Question(
             id=question_id,

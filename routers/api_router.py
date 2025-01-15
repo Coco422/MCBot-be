@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id, get_analysis_by_question_id
-from services.chat_service import chat_with_ai
+from services.chat_service import chat_with_ai,text_to_speech
 from models.question import Question
 from models.law import LawSlice
 from models.chat import ChatRequest
 from models.analysis import AnalysisResponse
-from models.common import ChatIdResponse
+from models.common import ChatIdResponse, TTSRequest
 import uuid
 
 # 创建路由器
@@ -62,3 +62,17 @@ async def generate_chat_id():
         return {"chat_id": chat_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@api_router.post("/tts")
+async def generate_tts(request: TTSRequest):
+    """
+    生成文字转语音
+    """
+    try:
+        #TODO 暂未完成自定义说话人等
+
+        audio_data = await text_to_speech(request.tts_text)
+        return Response(content=audio_data, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    

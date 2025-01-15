@@ -1,7 +1,9 @@
 from fastapi import HTTPException
-from utils.openai_chat import get_chat_response
+from utils.openai_chat import get_chat_response_stream
 from typing import AsyncIterator
 from models.chat import ChatRequest
+from openai import AsyncOpenAI
+import os
 # 默认的系统提示词
 DEFAULT_SYSTEM_PROMPT = """
 角色设定：
@@ -32,7 +34,7 @@ DEFAULT_SYSTEM_PROMPT = """
 其余情况你可以和用户进行友好的聊天。
 """
 
-async def chat_with_ai(request: ChatRequest, system_prompt: str = None) -> AsyncIterator[str]:
+async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
     """
     与 AI 聊天，返回流式响应。
     :param request: 前端发送的内容
@@ -50,7 +52,27 @@ async def chat_with_ai(request: ChatRequest, system_prompt: str = None) -> Async
             {"role": "user", "content": request.user_input},
         ]
         # 获取流式响应
-        async for chunk in get_chat_response(messages, system_prompt or DEFAULT_SYSTEM_PROMPT):
+        async for chunk in get_chat_response_stream(messages):
             yield chunk
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
+    
+async def text_to_speech(text: str) -> bytes:
+    """
+    将文本转换为语音
+    :param text: 要转换的文本内容
+    :return: 音频文件的二进制数据
+    """
+    try:
+        client = AsyncOpenAI(base_url=os.getenv("TTS_URL"),api_key=os.getenv("TTS_API_KEY"))
+        
+        response = await client.audio.speech.create(
+            model="tts-1",
+            voice="zh-CN-XiaoxiaoNeural",
+            input=text
+        )
+        
+        return response.content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS service error: {str(e)}")
+    
