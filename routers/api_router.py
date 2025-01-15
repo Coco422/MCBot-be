@@ -104,8 +104,8 @@ async def clone_voice_endpoint(request: VoiceCloneRequest):
     """
     上传用户录音文件、自定义名称和参考文本，用于预置音色。
     - **custom_name**: Optional[str] = "MCBotDEMO"用户自定义的音频名称
-    - **reference_text**: 参考音频的文字内容
-    - **base64_audio**: base64 编码的音频数据
+    - **reference_text**: Optional[str]参考音频的文字内容
+    - **base64_audio**: base64 Optional[str]编码的音频数据
     - **tts_text**: str # 目标生成的文字
     """
     try:
