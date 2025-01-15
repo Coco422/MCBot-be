@@ -6,7 +6,7 @@ import os
 from typing import List, Dict, AsyncIterator
 import json
 
-async def get_chat_response_stream(messages: List[Dict[str, str]]) -> AsyncIterator[str]:
+async def get_chat_response_stream(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
     """
     获取 OpenAI 聊天模型的流式响应。
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
@@ -22,11 +22,20 @@ async def get_chat_response_stream(messages: List[Dict[str, str]]) -> AsyncItera
         api_key=os.getenv("ai_api_key"),
         base_url=os.getenv("ai_base_url"),
     )
-
-    # 拥有 tools 列表的对象
-    llm_with_tools = llm.bind_tools(tools)
-    
-    
+        
+    # 假如方法中传入参数system prompt 则在 messages 最前面加上，否则加上默认提示词
+    if not system_prompt and messages[0]["role"] != "system":
+        system_message = {
+            "role": "system",
+            "content": "You are an AI assistant that helps people with their questions."
+        }
+        messages.insert(0, system_message)
+    else:
+        system_message = {
+            "role": "system",
+            "content": system_prompt
+        }
+        messages.insert(0, system_message)
 
     # 获取流式响应（同步生成器）
     stream_res = llm.stream(messages, stream_usage=True)

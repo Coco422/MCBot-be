@@ -1,9 +1,17 @@
 from fastapi import HTTPException
 from utils.openai_chat import get_chat_response_stream
+from database.connection import get_db_connection, release_db_connection
 from typing import AsyncIterator
 from models.chat import ChatRequest
 from openai import AsyncOpenAI
+import uuid
 import os
+import json
+from psycopg2.extras import Json
+
+# 内存中的对话历史
+chat_history_map = {}
+
 # 默认的系统提示词
 DEFAULT_SYSTEM_PROMPT = """
 角色设定：
@@ -34,6 +42,66 @@ DEFAULT_SYSTEM_PROMPT = """
 其余情况你可以和用户进行友好的聊天。
 """
 
+
+def create_chat_id():
+    """生成唯一的 chat_id"""
+    return str(uuid.uuid4())
+
+def save_to_db(chat_id, messages):
+    """将对话历史保存到 PostgreSQL 数据库"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """
+        INSERT INTO tobacco.chat_history (chat_id, messages)
+        VALUES (%s, %s)
+        ON CONFLICT (chat_id) DO UPDATE
+        SET messages = EXCLUDED.messages, updated_at = CURRENT_TIMESTAMP;
+        """
+        cursor.execute(query, (chat_id, Json(messages)))
+        conn.commit()
+    except Exception as e:
+        print(f"数据库保存失败: {e}")
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+def load_from_db(chat_id):
+    """从 PostgreSQL 数据库加载对话历史"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = "SELECT messages FROM tobacco.chat_history WHERE chat_id = %s;"
+        cursor.execute(query, (chat_id,))
+        result = cursor.fetchone()
+        return result[0] if result else []
+    except Exception as e:
+        print(f"数据库加载失败: {e}")
+        return []
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+def get_chat_history(chat_id):
+    """获取对话历史（优先从内存中获取，内存中没有则从数据库加载）"""
+    if chat_id in chat_history_map:
+        return chat_history_map[chat_id]
+    else:
+        messages = load_from_db(chat_id)
+        if messages:
+            chat_history_map[chat_id] = messages
+        return messages
+
+def add_message_to_chat(chat_id, role, content):
+    """向对话历史中添加消息"""
+    if chat_id not in chat_history_map:
+        chat_history_map[chat_id] = []
+    chat_history_map[chat_id].append({"role": role, "content": content})
+    # 同步到数据库
+    save_to_db(chat_id, chat_history_map[chat_id])
+
 async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
     """
     与 AI 聊天，返回流式响应。
@@ -45,19 +113,35 @@ async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
         #TODO 先从内存 map 中 查询是否有历史消息。没有读库获取。
         # 进行一次持久化（入库），目前不考虑锁的问题，不存在两个相同用户访问同一个会话
         # 
+        # 获取或创建 chat_id
+        chat_id = request.chat_id
 
+        # 加载历史消息
+        history = get_chat_history(chat_id)
 
-        #TODO 构造消息列表，目前这个不完善
-        messages = [
-            {"role": "user", "content": request.user_input},
-        ]
+        # 构造消息列表
+        messages = history.copy()  # 复制历史消息
+        messages.append({"role": "user", "content": request.user_input})  # 添加当前用户输入
+
+        # 保存用户输入到历史记录
+        add_message_to_chat(chat_id, "user", request.user_input)
+
         # 获取流式响应
-        async for chunk in get_chat_response_stream(messages):
+        async for chunk in get_chat_response_stream(messages,system_prompt=DEFAULT_SYSTEM_PROMPT):
             yield chunk
+        full_response = chunk
+        # 解析 AI 的完整回复
+        data_start = full_response.find("data: ") + len("data: ")
+        data_end = full_response.find("\n", data_start)
+        data_str = full_response[data_start:data_end].strip()
+        data_dict = json.loads(data_str)
+
+        # 保存 AI 回复到历史记录
+        add_message_to_chat(request.chat_id, "assistant", data_dict["content"])
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
     
-async def text_to_speech(text: str) -> bytes:
+async def text_to_speech(tts_text: str) -> bytes:
     """
     将文本转换为语音
     :param text: 要转换的文本内容
@@ -69,7 +153,7 @@ async def text_to_speech(text: str) -> bytes:
         response = await client.audio.speech.create(
             model="tts-1",
             voice="zh-CN-XiaoxiaoNeural",
-            input=text
+            input=tts_text
         )
         
         return response.content
