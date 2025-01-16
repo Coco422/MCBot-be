@@ -1,7 +1,9 @@
+import time
 from fastapi import HTTPException
 
-from utils.openai_chat import get_chat_response_stream, get_chat_response_stream_oai
+from utils.openai_chat import get_chat_response_stream_langchain
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id
+from utils.embedding_service import embedding_service
 from models.question import Question
 from models.law import LawSlice
 from database.connection import get_db_connection, release_db_connection
@@ -11,6 +13,12 @@ from models.chat import ChatRequest
 import uuid
 import json
 from psycopg2.extras import Json
+
+# ----------配置日志-------------
+from utils.ray_logger import LoggerHandler
+log_file = "main.log"
+logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
+# -----------日志配置完成----------
 
 # 内存中的对话历史
 chat_history_map = {}
@@ -72,7 +80,7 @@ def save_to_db(chat_id, messages):
         cursor.execute(query, (chat_id, Json(messages)))
         conn.commit()
     except Exception as e:
-        print(f"数据库保存失败: {e}")
+        logger.error(f"数据库保存失败: {e}")
     finally:
         if conn:
             release_db_connection(conn)
@@ -88,7 +96,7 @@ def load_from_db(chat_id):
         result = cursor.fetchone()
         return result[0] if result else []
     except Exception as e:
-        print(f"数据库加载失败: {e}")
+        logger.error(f"数据库加载失败: {e}")
         return []
     finally:
         if conn:
@@ -116,6 +124,16 @@ def add_message_to_chat(chat_id, role, content):
     # 同步到数据库
     save_to_db(chat_id, chat_history_map[chat_id])
 
+async def rag_search(question: str) -> List[dict]:
+    """Perform RAG search using embedding service"""
+    # Get embedding for the question
+    embedding = await embedding_service.get_embedding(question)
+    
+    # Search for similar content in database
+    results = await embedding_service.search_similar(embedding)
+    
+    return results
+
 def format_to_markdown(law_slices: List[LawSlice]) -> str:
     markdown_str = ""
     for law in law_slices:
@@ -124,6 +142,8 @@ def format_to_markdown(law_slices: List[LawSlice]) -> str:
         markdown_str += f"- **条款内容**: {law.article_content}\n"
         markdown_str += f"- **相似度**: {law.similarity:.2f}\n\n"
     return markdown_str
+
+
 
 async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
     """
@@ -137,17 +157,22 @@ async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
         chat_id = request.chat_id
 
         # 判断是否开启 RAG
-        #TODO 目前 RAG 为 fake RAG
         if request.if_kb:
-            print("now we are in RAG chat")
-            q1: Question = get_random_question(request.question_id)
-            l1: list[LawSlice] = get_law_slices_by_question_id(request.question_id)
+            # 调用RAG搜索
+            rag_results = await rag_search(request.user_input)
+            
+            # 格式化RAG结果
+            rag_context = "\n".join(
+                f"相关文档 {i+1}:\n{result['content']}\n相似度: {result['similarity']:.2f}"
+                for i, result in enumerate(rag_results)
+            )
+            
             user_input_with_kb = f"""
-相关法条:{format_to_markdown(l1)},
-题目内容:{q1.q_stem},
-题目选项:{q1.options},
-正确答案:{q1.answer},
-用户提问:{request.user_input}
+相关文档:
+{rag_context}
+
+用户提问:
+{request.user_input}
 """
             finally_input = user_input_with_kb
         else:
@@ -160,12 +185,25 @@ async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
         messages = history.copy()  # 复制历史消息
         messages.append({"role": "user", "content": finally_input})  # 添加当前用户输入
 
-        # 获取流式响应
-        #TODO 缺少 usage
-        async for chunk in get_chat_response_stream_oai(messages,system_prompt=DEFAULT_SYSTEM_PROMPT):
+        async for chunk in get_chat_response_stream_langchain(messages):
             yield chunk
+    
+        full_response = chunk
+
+        # 1. 找到 "data: " 的位置
+        data_start = full_response.find("data: ") + len("data: ")
+        # 2. 提取 data 部分
+        data_str = full_response[data_start:].strip()
+
+        # 将 data 字符串解析为 JSON 对象
+        data = json.loads(data_str)
+
+        # 获取 content 字段
+        content = data["content"]
+
         # 保存 AI 回复到历史记录
-        # add_message_to_chat(request.chat_id, "assistant", full_response["content"])
+        # 假设 add_message_to_chat 是你的函数
+        add_message_to_chat(request.chat_id, "assistant", content)
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
     

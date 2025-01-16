@@ -8,16 +8,35 @@ from typing import List, Dict, AsyncIterator
 import json
 import time
 
+import warnings
+from functools import wraps
 
-import openai
+from openai import AsyncOpenAI, OpenAI
 
-async def get_chat_response_stream_oai(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
+# ----------配置日志-------------
+from utils.ray_logger import LoggerHandler
+log_file = "main.log"
+logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
+# -----------日志配置完成----------
+
+def deprecated(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        warnings.warn(
+            f"'{func.__name__}' is deprecated and will be removed in a future version.",
+            FutureWarning,
+            stacklevel=2
+        )
+        return func(*args, **kwargs)
+    return wrapper
+
+@deprecated
+async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
     """
-    获取 OpenAI 聊天模型的流式响应。
+    获取 OpenAI 聊天模型的流式响应。by httpx
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
-    # 初始化 OpenAI 客户端
     api_key=os.getenv("ai_api_key")
     base_url=os.getenv("ai_base_url")
     model_id=os.getenv("ai_chat_model")
@@ -88,24 +107,67 @@ async def get_chat_response_stream_oai(messages: List[Dict[str, str]], system_pr
 
     if buffer.strip():
         print(f"未处理的剩余数据: {buffer.strip()}")
-    
 
-
-async def get_chat_response_stream(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
+@deprecated
+async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
     """
-    获取 OpenAI 聊天模型的流式响应。
+    获取 OpenAI 聊天模型的流式响应。堵塞了
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
+    
+    api_key=os.getenv("ai_api_key")
+    base_url=os.getenv("ai_base_url")
+    model_id=os.getenv("ai_chat_model")
+
+        # 假如方法中传入参数 system prompt 则在 messages 最前面加上，否则加上默认提示词
+    if not system_prompt and messages[0]["role"] != "system":
+        system_message = {
+            "role": "system",
+            "content": "You are an AI assistant that helps people with their questions."
+        }
+        messages.insert(0, system_message)
+
+    client = AsyncOpenAI(base_url=base_url,api_key=api_key)
+    # client = OpenAI(base_url=base_url,api_key=api_key)
+    start_time = time.time()
+    print(f"now begin stream llm: {start_time}")
+    flag = 1
+    completion = await client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        stream=True,
+        )
+    async for chunk in completion:
+        if flag == 1:
+            ft_time = time.time()
+            print(f"first token Consume time:{ft_time - start_time}")
+            flag = 0
+        print("in openai",end=":")
+        print(chunk.choices[0].delta)
+         # 实时推送数据到客户端
+        yield f"event: Update\ndata: {chunk.choices[0].delta.content}\n\n"
+    end_time = time.time()
+    print(f"all out put Consume time:{end_time - start_time}")
+
+async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
+    """
+    获取 OpenAI 聊天模型的流式响应。堵塞了
+    :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
+    :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
+    """
+
+    model_name = os.getenv("hw_ai_chat_model_32")
+    logger.info(model_name)
     # 初始化 LangChain 的 ChatOpenAI
     llm = ChatOpenAI(
-        model=os.getenv("ai_chat_model"),
+        model=model_name,
         temperature=0,
         max_tokens=None,
         timeout=None,
         max_retries=2,
-        api_key=os.getenv("ai_api_key"),
-        base_url=os.getenv("ai_base_url"),
+        api_key=os.getenv("hw_ai_api_key_32"),
+        base_url=os.getenv("hw_ai_base_url_32"),
     )
         
     # 假如方法中传入参数system prompt 则在 messages 最前面加上，否则加上默认提示词
@@ -121,21 +183,30 @@ async def get_chat_response_stream(messages: List[Dict[str, str]], system_prompt
             "content": system_prompt
         }
         messages.insert(0, system_message)
-    print("now begin stream llm")
+
     start_time = time.time()
+    # 将时间戳转换为人类可读格式，精确到毫秒
+    readable_start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + f".{int(start_time * 1000) % 1000:03d}"
+    logger.info(f"now begin stream llm: {readable_start_time}")
     flag = 1
-    
-    # 获取流式响应（同步生成器）
-    for chunk in llm.stream(messages, stream_usage=True):
-        if flag==1:
-            end_time = time.time()
-            print(end_time-start_time)
+    completion = llm.astream(messages, stream_usage=True)
+    # 获取流式响应（异步生成器）
+    async for chunk in completion:
+        if flag == 1:
+            ft_time = time.time()
+            readable_ft_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ft_time)) + f".{int(ft_time * 1000) % 1000:03d}"
+            time_diff_ms = (ft_time - start_time) * 1000  # 转换为毫秒
+            logger.info(f"first token Consume time: {time_diff_ms:.2f} ms")
+            logger.info(f"when we get first token from llm: {readable_ft_time}")
             full = chunk
             flag=0
-        print("update")
         full += chunk
         yield f"event: Update\ndata: {chunk.content}\n\n" # 假设 AIMessageChunk 有 content 属性
-        # await asyncio.sleep(0)  # 让出控制权，避免阻塞事件循环 效果有限。
+    end_time = time.time()
+    readable_ft_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time)) + f".{int(end_time * 1000) % 1000:03d}"
+    time_diff_ms = (end_time - start_time) * 1000  # 转换为毫秒
+    logger.info(f"when we get all token from llm: {readable_ft_time}")
+    logger.info(f"all out put Consume time: {time_diff_ms:.2f} ms")
     response_dict = {
     "content": full.content,
     "additional_kwargs": full.additional_kwargs,

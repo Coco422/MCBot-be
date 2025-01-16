@@ -10,3 +10,4 @@ sse_starlette
 openai
 python-multipart
 aiohttp
+colorlog
