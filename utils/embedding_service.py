@@ -46,10 +46,10 @@ class EmbeddingService:
                             # Parse the response JSON
                             result = await response.json()
                             # Assuming the response contains a field "embedding" with the vector
-                            if "embedding" in result:
-                                return result["embedding"]
+                            if "sentence" in result:
+                                return result["sentence"]
                             else:
-                                raise ValueError("Response does not contain 'embedding' field")
+                                raise ValueError("Response does not contain 'sentence' field")
                         else:
                             # Handle non-200 status codes
                             raise Exception(f"Embedding service returned status code {response.status}")

@@ -8,8 +8,7 @@ from typing import List, Dict, AsyncIterator
 import json
 import time
 
-import warnings
-from functools import wraps
+from utils.utils import deprecated
 
 from openai import AsyncOpenAI, OpenAI
 
@@ -18,17 +17,6 @@ from utils.ray_logger import LoggerHandler
 log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # -----------日志配置完成----------
-
-def deprecated(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        warnings.warn(
-            f"'{func.__name__}' is deprecated and will be removed in a future version.",
-            FutureWarning,
-            stacklevel=2
-        )
-        return func(*args, **kwargs)
-    return wrapper
 
 @deprecated
 async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
