@@ -24,6 +24,7 @@ logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # 内存中的对话历史
 chat_history_map = {}
 
+
 # 默认的系统提示词
 DEFAULT_SYSTEM_PROMPT = """\
 版本:v0.0.1
@@ -73,11 +74,27 @@ DEFAULT_SYSTEM_PROMPT = """\
 其余情况你可以和用户进行友好的聊天。
 """
 
-def create_chat_id():
+def create_chat_id(user_id:str):
     """生成唯一的 chat_id"""
-    return str(uuid.uuid4())
+    generated_uuid = str(uuid.uuid4())
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """
+        INSERT INTO tobacco.chat_history (chat_id, user_id)
+        VALUES (%s, %s);
+        """
+        cursor.execute(query, (generated_uuid, user_id))
+        conn.commit()
+    except Exception as e:
+        logger.error(f"创建chat_id失败: {e}")
+    finally:
+        if conn:
+            release_db_connection(conn)
+    return generated_uuid
 
-def save_to_db(chat_id, messages):
+def save_chat_to_db(chat_id, messages):
     """将对话历史保存到 PostgreSQL 数据库"""
     conn = None
     try:
@@ -97,7 +114,7 @@ def save_to_db(chat_id, messages):
         if conn:
             release_db_connection(conn)
 
-def load_from_db(chat_id):
+def load_chat_from_db(chat_id):
     """从 PostgreSQL 数据库加载对话历史"""
     conn = None
     try:
@@ -119,14 +136,31 @@ def get_chat_history(chat_id):
     if chat_id in chat_history_map:
         return chat_history_map[chat_id]
     else:
-        messages = load_from_db(chat_id)
+        messages = load_chat_from_db(chat_id)
         if messages:
             chat_history_map[chat_id] = messages
         return messages
 
-def get_chat_id_from_db(user_id):
-    #TODO
-    pass
+def get_chat_id_list_from_db(user_id:str)->list:
+    """从数据库检索 user_id 所包含的 chat_id"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """
+        SELECT chat_id FROM tobacco.chat_history
+        WHERE user_id = %s
+        ORDER BY created_at DESC;
+        """
+        cursor.execute(query, (user_id,))
+        results = cursor.fetchall()
+        return [row[0] for row in results] if results else []
+    except Exception as e:
+        logger.error(f"获取chat_id列表失败: {e}")
+        return []
+    finally:
+        if conn:
+            release_db_connection(conn)
 
 def add_message_to_chat(chat_id, role, content):
     """向对话历史中添加消息"""
@@ -134,7 +168,7 @@ def add_message_to_chat(chat_id, role, content):
         chat_history_map[chat_id] = []
     chat_history_map[chat_id].append({"role": role, "content": content})
     # 同步到数据库
-    save_to_db(chat_id, chat_history_map[chat_id])
+    save_chat_to_db(chat_id, chat_history_map[chat_id])
 
 async def rag_search(question: str) -> List[dict]:
     """Perform RAG search using embedding service"""

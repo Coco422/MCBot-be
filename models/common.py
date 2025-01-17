@@ -5,6 +5,9 @@ from typing import Optional
 class ChatIdResponse(BaseModel):
     chat_id: str
 
+class ChatIdListResponse(BaseModel):
+    chat_id_list: list = Field(...,description="返回当前用户拥有的chat_id list")
+
 class TTSRequest(BaseModel):
     tts_text: str = Field(
         ...,

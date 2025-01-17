@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Query, HTTPException, Response, File, UploadFile
 from fastapi.responses import StreamingResponse
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id, get_analysis_by_question_id
-from services.chat_service import chat_with_ai, create_chat_id
+from services.chat_service import chat_with_ai, create_chat_id, get_chat_id_list_from_db
 from services.voice_service import text_to_speech, speech_to_text, clone_voice
 from models.question import Question
 from models.law import LawSlice
 from models.chat import ChatRequest
 from models.analysis import AnalysisResponse
-from models.common import ChatIdResponse, TTSRequest, VoiceCloneRequest
+from models.common import ChatIdResponse, TTSRequest, VoiceCloneRequest, ChatIdListResponse
 
 
 # 创建路由器
@@ -78,14 +78,28 @@ async def analysis(questionid: int = Query(..., description="题目ID")):
         raise HTTPException(status_code=5000, detail=str(e))
 
 @api_router.get("/chatid", response_model=ChatIdResponse)
-async def generate_chat_id():
+async def generate_chat_id(user_id: str = Query(..., description="用户的凭证")):
     """
     生成一个唯一的 chat_id 并返回
     """
     try:
+        #TODO 需要验证用户 id
         # 生成唯一的 chat_id
-        chat_id = create_chat_id()
+        chat_id = create_chat_id(user_id)
         return {"chat_id": chat_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@api_router.get("/chatid_list", response_model=ChatIdListResponse)
+async def get_chat_id_list_by_user_id(user_id: str = Query(..., description="用户的凭证")):
+    """
+    返回当前用户的所有 chat_id 的 list
+    """
+    try:
+        #TODO 需要验证用户 id
+        # 生成唯一的 chat_id
+        chat_id_list = get_chat_id_list_from_db(user_id)
+        return {"chat_id_list": chat_id_list}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
