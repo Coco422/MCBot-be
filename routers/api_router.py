@@ -48,7 +48,19 @@ async def chat_train(request: ChatRequest):
         return StreamingResponse(content = chat_with_ai(request),media_type="text/event-stream",)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@api_router.post("/chat/analysis")
+async def chat_train(request: ChatRequest):
+    """
+    use chat for search data or sth
+    """
+    try:
+        #TODO
+
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/tts")
 async def generate_tts(request: TTSRequest):
     """

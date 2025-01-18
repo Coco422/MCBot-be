@@ -25,8 +25,8 @@ async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
-    api_key=os.getenv("ai_api_key")
-    base_url=os.getenv("ai_base_url")
+    api_key=os.getenv("ray_ai_api_key_free")
+    base_url=os.getenv("ray_ai_base_url")
     model_id=os.getenv("ai_chat_model")
 
 
@@ -104,8 +104,8 @@ async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     
-    api_key=os.getenv("ai_api_key")
-    base_url=os.getenv("ai_base_url")
+    api_key=os.getenv("ray_ai_api_key_free")
+    base_url=os.getenv("ray_ai_base_url")
     model_id=os.getenv("ai_chat_model")
 
         # 假如方法中传入参数 system prompt 则在 messages 最前面加上，否则加上默认提示词
@@ -154,8 +154,8 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
         max_tokens=None,
         timeout=None,
         max_retries=2,
-        api_key=os.getenv("hw_ai_api_key_32"),
-        base_url=os.getenv("hw_ai_base_url_32"),
+        api_key=os.getenv("ray_ai_api_key_free"),
+        base_url=os.getenv("ray_ai_base_url"),
     )
         
     # 假如方法中传入参数system prompt 则在 messages 最前面加上，否则加上默认提示词
@@ -197,10 +197,9 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     logger.info(f"all out put Consume time: {time_diff_ms:.2f} ms")
     response_dict = {
     "content": full.content,
-    "additional_kwargs": full.additional_kwargs,
     "response_metadata": full.response_metadata,
-    "id": full.id,
-    "usage_metadata": full.usage_metadata
+    "usage_metadata": full.usage_metadata,
+    "time_consuming": f"{time_diff_ms:.2f}"
     }
     # 将字典转换为 JSON 字符串
     json_string = json.dumps(response_dict, ensure_ascii=False)

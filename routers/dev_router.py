@@ -4,7 +4,7 @@ from database.connection import get_db_connection, release_db_connection
 
 
 # 创建路由器
-dev_router = APIRouter(prefix="/dev")
+dev_router = APIRouter(prefix="/dev", tags=["Dev"])
 
 @dev_router.get("/chat_history")
 async def get_chat_history():

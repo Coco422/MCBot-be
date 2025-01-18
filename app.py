@@ -9,7 +9,14 @@ from routers.dev_router import dev_router
 from fastapi.middleware.cors import CORSMiddleware
 
 # 初始化 FastAPI 应用
-app = FastAPI()
+app = FastAPI(
+    openapi_tags=[
+        {
+            "name": "Dev",
+            "description": "这是开发环境相关的 API，用于测试和调试。请不要直接在系统中使用dev下的接口"
+        }
+    ]
+    )
 
 # 配置 CORS TODO
 app.add_middleware(
@@ -28,6 +35,7 @@ app.include_router(dev_router)
 
 # 挂载静态文件目录到根路径
 app.mount("/", StaticFiles(directory="html", html=True), name="static")
+
 
 if __name__ == "__main__":
     import uvicorn
