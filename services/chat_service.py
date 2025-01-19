@@ -204,26 +204,26 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
 
         # 判断是否开启 RAG
         if request.if_kb:
-
-            # 先获取用户当前的题目信息
-            # 根据id 查询题目信息
-            question_option_info_full = get_random_question(request.question_id)
-            # 构建 RAG 用的 题目和选项
-            question_option = f"q:{question_option_info_full.q_stem};\noptions:{question_option_info_full.options}"
-            # 调用RAG搜索
-            rag_question_low_results = await rag_search(question_option)
-            # 格式化RAG结果
-            rag_context = "\n".join(
-                f"相关文档 {i+1}:\n"
-                f"法律ID: {result['law_id']}\n"
-                f"法律名称: {result['law_name']}\n"
-                f"章节: {result['chapter']}\n"
-                f"文章内容: {result['article_content']}\n"
-                f"相似度: {result['similarity']:.2f}\n"
-                for i, result in enumerate(rag_question_low_results)
-            )
-            
-            user_input_with_kb = f"""
+            try:
+                # 先获取用户当前的题目信息
+                # 根据id 查询题目信息
+                question_option_info_full = get_random_question(request.question_id)
+                # 构建 RAG 用的 题目和选项
+                question_option = f"q:{question_option_info_full.q_stem};\noptions:{question_option_info_full.options}"
+                # 调用RAG搜索
+                rag_question_low_results = await rag_search(question_option)
+                # 格式化RAG结果
+                rag_context = "\n".join(
+                    f"相关文档 {i+1}:\n"
+                    f"法律ID: {result['law_id']}\n"
+                    f"法律名称: {result['law_name']}\n"
+                    f"章节: {result['chapter']}\n"
+                    f"文章内容: {result['article_content']}\n"
+                    f"相似度: {result['similarity']:.2f}\n"
+                    for i, result in enumerate(rag_question_low_results)
+                )
+                yield f"event:rag\n{rag_context}\n\n"
+                user_input_with_kb = f"""\
 相关文档:
 {rag_context}
 
@@ -236,7 +236,34 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
 用户提问:
 {request.user_input}
 """
-            finally_input = user_input_with_kb
+                finally_input = user_input_with_kb
+            except:
+                # 如果问题id出错
+                # 调用RAG搜索
+                rag_question_low_results = await rag_search(request.user_input)
+                # 格式化RAG结果
+                rag_context = "\n".join(
+                    f"相关文档 {i+1}:\n"
+                    f"法律ID: {result['law_id']}\n"
+                    f"法律名称: {result['law_name']}\n"
+                    f"章节: {result['chapter']}\n"
+                    f"文章内容: {result['article_content']}\n"
+                    f"相似度: {result['similarity']:.2f}\n"
+                    for i, result in enumerate(rag_question_low_results)
+                )
+                yield f"event:rag\n{rag_context}\n\n"
+                user_input_with_kb = f"""
+相关文档:
+{rag_context}
+
+用户当前查看题目信息:
+无
+
+用户提问:
+{request.user_input}
+"""         
+                finally_input = user_input_with_kb
+
         else:
             finally_input = request.user_input
         # 避免 token 浪费，这里历史记录只存用户的问题，对对话影响不是很大。但是这里后续要改进 TODO
@@ -277,6 +304,8 @@ async def optimize_query_with_llm(query: str) -> str:
     messages = [{"role": "user", "content": f"""
                  请优化以下用户的询问语句，使其更清晰准确:\n{query}
 如果用户的语句足够清晰，直接输出用户的语句即可
+如果用户表达的意思混乱，不要进行询问。尽可能的优化成正常的问句。不要对内容进行修改。
+直接输出优化结果，不要进行询问
 """}]
     return await get_chat_response(messages)
 
@@ -371,6 +400,22 @@ def generate_sql_reasoning(query: str, table_info: dict) -> AsyncIterator[str]:
     }]
     return get_chat_response_stream_langchain(messages)
 
+def final_output(query:str, query_result:str)-> AsyncIterator[str]:
+    """
+    生成结果的回答
+    """
+    messages = [{
+        "role": "user",
+        "content": f"""
+        接下来提供给你用户的查询语句和查到的结果（结果以markdown形式给到你）
+        查询: {query}
+        查询结果: {query_result}
+        根据查询结果，回答用户的问题，不要有多余的废话和解释。仅友好的回答问题即可
+        如果查询结果无法推断回答用户问题，则告知。“非常抱歉，无法从已查询内容回答您的问题”
+        """
+    }]
+    return get_chat_response_stream_langchain(messages)
+
 async def generate_sql(query: str, table_info: dict, reasoning: str) -> str:
     """
     根据推理生成SQL查询
@@ -411,18 +456,33 @@ remember only output the sql by json.Do not explain
         return llm_response.get("sql") or llm_response.get("SQL") or llm_response
     return llm_response
 
-def format_results(results: list) -> str:
+async def format_results(results: List[tuple], sql_query: str) -> str:
     """
     格式化SQL查询结果
     """
     if not results:
         return "查询结果集无内容"
     
-    formatted = []
-    for row in results:
-        formatted.append("\t".join(str(x) for x in row))
+    # 构造messages，要求LLM根据SQL语句和查询结果输出标准的Markdown格式表格
+    messages = [{
+        "role": "user",
+        "content": f"""
+        请根据以下SQL查询和结果生成一个标准的Markdown格式表格：
+        
+        SQL查询：
+        {sql_query}
+        
+        查询结果：
+        {results}
+        
+        请确保表格包含所有列和行，并以易读的方式呈现数据，注意表头和sql查询语句需要对应。
+        请只返回Markdown格式的表格，不需要其他解释。
+        """
+    }]
     
-    return "\n".join(formatted)
+    llm_response = await get_chat_response(messages)
+    
+    return llm_response
 
 async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[str]:
     """
@@ -440,7 +500,7 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         yield "event:step1\ndata:优化用户的问题\n\n"
         logger.warning("1. 开始优化用户的问题")
         optimized_query = await optimize_query_with_llm(user_query)
-        yield f"event:update\ndata:优化后的查询: {optimized_query}\n\n"
+        yield f"event:update\ndata:{optimized_query}\n\n"
         
         # step 2: 选择表格
         yield "event:step2\ndata:选择表格中\n\n"
@@ -476,14 +536,22 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         # step 6: 格式化结果
         yield "event:step6\ndata:格式化结果\n\n"
         logger.warning("6.格式化结果")
-        formatted_results = format_results(results)
-        yield f"event:update\ndata:{formatted_results}\n\n"
+        formatted_results = await format_results(results, sql_query)
+        yield f"event:update\ndata:格式化成功\n\n"
+        # yield f"event:update\ndata:{formatted_results}\n\n"
         
         # step 7: 保存结果
         yield "event:step7\ndata:保存结果\n\n"
         logger.warning("7. 保存结果")
         add_message_to_chat(chat_id, "assistant", f"SQL查询结果:\n{formatted_results}")
         yield "event:update\ndata:结果已保存到对话历史\n\n"
+        
+        # step 8: 最终输出
+        yield "event:step8\ndata:最终输出\n\n"
+        logger.warning("8. 最终输出")
+        final_output_from_llm = final_output(optimized_query, formatted_results)
+        async for chunk_output in final_output_from_llm:
+            yield chunk_output
         
     except Exception as e:
         logger.error(f"SQL执行失败: {e}")
