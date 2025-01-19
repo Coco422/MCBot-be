@@ -4,9 +4,10 @@ from models.analysis import AnalysisResponse
 from fastapi import HTTPException
 import random
 from database.connection import get_db_connection, release_db_connection
+from tools.utils import deprecated
 
 # ----------配置日志-------------
-from utils.ray_logger import LoggerHandler
+from tools.ray_logger import LoggerHandler
 log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # -----------日志配置完成----------
@@ -14,6 +15,7 @@ logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # 可用题目 ID
 QUESTION_IDS = [12975, 12995, 13007, 12956, 12958, 12962, 12934, 12977, 13019, 12946, 12902, 13022, 12938, 12988, 12985, 12935, 12896, 13040, 12901, 12971, 12997, 12961, 12982, 12895, 13037, 12891, 12973, 12916, 13009, 12984, 13015, 12980, 12954, 13000, 12930, 12892, 12903, 12952, 13027, 13063, 12948, 12909, 13054, 12993, 13048, 12926, 12967, 12942, 12918, 12912, 12897, 12950, 13011, 12965, 12969, 12941, 13003, 13016, 13046, 13117, 12999, 12944, 13032, 12990, 12908, 12914, 13018, 13077, 12960, 12906, 13005, 12983, 12932, 12924, 12890, 12921, 12928, 12915, 12898, 13013]
 
+@deprecated
 def get_law_slices_by_question_id(question_id: int) -> list[LawSlice]:
     """
     根据题目ID获取对应的法条切片

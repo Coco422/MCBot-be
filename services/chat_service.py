@@ -1,22 +1,23 @@
+import asyncio
 import time
 from fastapi import HTTPException
 
-from utils.utils import deprecated
-from utils.openai_chat import get_chat_response_stream_langchain
-from services.tobacco_study import get_random_question, get_law_slices_by_question_id
-from utils.embedding_service import embedding_service
+from tools.utils import deprecated
+from tools.openai_chat import get_chat_response_stream_httpx, get_chat_response_stream_langchain, get_chat_response
+from services.tobacco_study import get_random_question
+from tools.embedding_service import embedding_service
 from models.question import Question
 from models.law import LawSlice
 from database.connection import get_db_connection, release_db_connection
 
 from typing import AsyncIterator, List
-from models.chat import ChatRequest
+from models.chat import ChatTrainRequest, ChatAnalysisRequest
 import uuid
 import json
 from psycopg2.extras import Json
 
 # ----------配置日志-------------
-from utils.ray_logger import LoggerHandler
+from tools.ray_logger import LoggerHandler
 log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # -----------日志配置完成----------
@@ -190,7 +191,7 @@ def format_to_markdown(law_slices: List[LawSlice]) -> str:
         markdown_str += f"- **相似度**: {law.similarity:.2f}\n\n"
     return markdown_str
 
-async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
+async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
     """
     与 AI 聊天，返回流式响应。
     :param request: 前端发送的内容
@@ -268,4 +269,226 @@ async def chat_with_ai(request: ChatRequest) -> AsyncIterator[str]:
         add_message_to_chat(request.chat_id, "assistant", content)
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
+
+async def optimize_query_with_llm(query: str) -> str:
+    """
+    使用LLM优化用户查询
+    """
+    messages = [{"role": "user", "content": f"""
+                 请优化以下用户的询问语句，使其更清晰准确:\n{query}
+如果用户的语句足够清晰，直接输出用户的语句即可
+"""}]
+    return await get_chat_response(messages)
+
+async def select_table(query: str) -> dict:
+    """
+    根据查询选择适当的表格
+    """
+    # 这里可以根据数据库schema信息选择表格
+    # 示例实现，实际应根据具体数据库schema调整
+    return """
+[DB_ID] exam_course
+[Schema]
+# Table: exam_course
+[
+  (id:INTEGER, Primary Key, the unique identifier of the exam course, Auto-increment, Examples: [1, 2, 3]),
+  (arrangename:TEXT, the name of the exam arrangement, Not Null, Examples: ['Mid-term Exam', 'Final Exam']),
+  (courseid:INTEGER, the ID of the course (referred from qht_course table), Not Null, Examples: [101, 102]),
+  (userids:TEXT, the IDs of the users arranged (referred from qht_userinfo table), Not Null, Examples: ['user1,user2', 'user3,user4']),
+  (departids:TEXT, the IDs of the departments arranged (referred from sys_DepartInfo table), Not Null, Examples: ['dept1,dept2', 'dept3,dept4']),
+  (edituserid:INTEGER, the ID of the user who edited (referred from sys_user table), Not Null, Examples: [201, 202]),
+  (editdatetime:TIMESTAMP, the time when the exam course was edited, Not Null, Examples: ['2024-01-01 10:00:00', '2024-01-02 11:00:00']),
+  (begindate:TIMESTAMP, the start date and time of the exam, Not Null, Examples: ['2024-01-01 09:00:00', '2024-01-02 09:00:00']),
+  (enddate:TIMESTAMP, the end date and time of the exam, Not Null, Examples: ['2024-01-01 11:00:00', '2024-01-02 11:00:00']),
+  (orgid:TEXT, the enterprise ID, Not Null, Examples: ['org001', 'org002']),
+  (createdate:TIMESTAMP, the creation date and time of the exam course, Not Null, Examples: ['2024-01-01 08:00:00', '2024-01-02 08:00:00']),
+  (examcount:INTEGER, the number of times the exam can be taken, Not Null, Examples: [1, 3]),
+  (examcategory:INTEGER, the type of exam arrangement, Not Null, Examples: [1, 2]),
+  (examinstructions:TEXT, the instructions for the exam, Not Null, Examples: ['Read carefully', 'No cheating']),
+  (cshow:INTEGER, the display mode (0: all departments, 1: department internal, 2: personal private), Not Null, Examples: [0, 1, 2]),
+  (remark:TEXT, remarks, Not Null, Examples: ['Important', 'Urgent']),
+  (roleids:TEXT, the IDs of the roles, Not Null, Examples: ['role1,role2', 'role3,role4']),
+  (groupids:TEXT, the IDs of the groups, Not Null, Examples: ['group1,group2', 'group3,group4']),
+  (postids:TEXT, the IDs of the posts, Not Null, Examples: ['post1,post2', 'post3,post4'])
+]
+[DB_ID] qht_userinfo
+[Schema]
+# Table: qht_userinfo
+[
+  (id:INT, Primary Key, the unique identifier of the user, Examples: [1, 2, 3]),
+  (username:NVARCHAR(300), the username of the user, Examples: ['user1', 'user2']),
+  (realname:NVARCHAR(100), the real name of the user, Examples: ['Real Name 1', 'Real Name 2']),
+  (userpass:NVARCHAR(300), the password of the user, Examples: ['pass123', 'pass456']),
+  (newpassword:NVARCHAR(300), the new password of the user, Examples: ['newPass123', 'newPass456']),
+  (gender:INT, the gender of the user (1: Male, 0: Female, 2: Unknown), Examples: [1, 0, 2]),
+  (userscore:INT, the score of the user, Examples: [100, 200]),
+  (qqnumber:NVARCHAR(30), the QQ number of the user, Examples: ['12345', '67890']),
+  (email:NVARCHAR(100), the email of the user, Examples: ['user1@example.com', 'user2@example.com']),
+  (mobilephone:NVARCHAR(100), the mobile phone number of the user, Examples: ['1234567890', '0987654321']),
+  (userimage:NVARCHAR(1000), the image URL of the user, Examples: ['http://example.com/image1.jpg', 'http://example.com/image2.jpg']),
+  -- Add other fields similarly...
+  (orgid:NVARCHAR(300), the organization ID of the user, Examples: ['org1', 'org2']),
+  (departid:INT, Maps to sys_departinfo(id), the department ID of the user, Examples: [1, 18, 26])
+]
+[Foreign keys]
+qht_userinfo.departid=sys_departinfo.id
+
+[DB_ID] sys_departinfo
+[Schema]
+# Table: sys_departinfo
+[
+  (id:INT, Primary Key, the unique identifier of the department, Examples: [1, 2, 3]),
+  (typename:NVARCHAR(300), the name of the department, Examples: ['Department 1', 'Department 2']),
+  (parentid:INT, Maps to sys_departinfo(id), the parent department ID, Examples: [0, 1]),
+  (typeorder:INT, the order of the department, Examples: [1, 2]),
+  (deleted:INT, whether the department is deleted (1: Deleted, 0: Not Deleted), Examples: [0, 1]),
+  (edituserid:INT, the ID of the user who last edited the department, Examples: [1, 2]),
+  (editdatetime:DATE, the date and time when the department was last edited, Examples: ['2024-01-01', '2024-02-01']),
+  (orgid:NVARCHAR(300), the organization ID of the department, Examples: ['org1', 'org2']),
+  (wechat_id:INT, the WeChat ID of the department, Examples: [1, 2]),
+  (wechat_parentid:INT, the WeChat parent ID of the department, Examples: [0, 1]),
+  (cshow:INT, the display setting of the department (0: All, 1: Internal, 2: Private), Examples: [0, 1, 2]),
+  (logoimg:NVARCHAR(1000), the logo image URL of the department, Examples: ['http://example.com/logo1.jpg', 'http://example.com/logo2.jpg']),
+  (loginbg:NVARCHAR(1000), the login background image URL of the department, Examples: ['http://example.com/bg1.jpg', 'http://example.com/bg2.jpg']),
+  (logotitle:NVARCHAR(100), the title of the department logo, Examples: ['Logo Title 1', 'Logo Title 2']),
+  (roma_stru_code:NVARCHAR(300), the ROMA structure code of the department, Examples: ['code1', 'code2']),
+  (roma_full_name:NVARCHAR(1000), the full name in ROMA format of the department, Examples: ['Full Name 1', 'Full Name 2'])
+]
+"""
+
+def generate_sql_reasoning(query: str, table_info: dict) -> AsyncIterator[str]:
+    """
+    生成SQL查询的推理过程
+    """
+    messages = [{
+        "role": "user",
+        "content": f"""
+        请解释如何根据以下查询生成SQL:
+        查询: {query}
+        表格信息: {table_info}
+        请详细说明查询逻辑和步骤,不要生成 sql 语句
+        """
+    }]
+    return get_chat_response_stream_langchain(messages)
+
+async def generate_sql(query: str, table_info: dict, reasoning: str) -> str:
+    """
+    根据推理生成SQL查询
+    
+    Args:
+        query: 自然语言查询
+        table_info: 表格信息
+        reasoning: 推理过程
+        
+    Returns:
+        生成的SQL查询语句
+    """
+
+    prompt = """You are now a PostgreSQL data analyst, and you are given a database schema as follows:
+
+【Schema】
+{db_schema}
+
+【Question】
+{question}
+
+【Evidence】
+{evidence}
+
+Please read and understand the database schema carefully, and generate an executable SQL based on the user's question and evidence. 
+The generated SQL is protected by json like this{{"sql":""}}.
+**IMPORTANT**
+remember only output the sql by json.Do not explain
+""".format(question=query, db_schema=table_info, evidence=reasoning)
+    
+    messages = [{
+        "role": "user",
+        "content": prompt
+    }]
+    llm_response = await get_chat_response(messages, if_json=True)
+    # 提取 SQL 语句
+    if isinstance(llm_response, dict):
+        return llm_response.get("sql") or llm_response.get("SQL") or llm_response
+    return llm_response
+
+def format_results(results: list) -> str:
+    """
+    格式化SQL查询结果
+    """
+    if not results:
+        return "查询结果集无内容"
+    
+    formatted = []
+    for row in results:
+        formatted.append("\t".join(str(x) for x in row))
+    
+    return "\n".join(formatted)
+
+async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[str]:
+    """
+    与 AI 进行数据分析对话，生成 SQL 并执行查询
+    :param request: 包含用户输入和数据库ID的请求
+    :return: 返回查询结果的流式响应
+    """
+    # 预留设计
+    database_id = request.database_id
+    user_query = request.user_input
+    chat_id = request.chat_id
+    
+    try:
+        # step 1: 优化用户问题
+        yield "event:step1\ndata:优化用户的问题\n\n"
+        logger.warning("1. 开始优化用户的问题")
+        optimized_query = await optimize_query_with_llm(user_query)
+        yield f"event:update\ndata:优化后的查询: {optimized_query}\n\n"
+        
+        # step 2: 选择表格
+        yield "event:step2\ndata:选择表格中\n\n"
+        logger.warning("2. 选择表格，返回表格信息")
+        table_info = await select_table(optimized_query)
+        yield f"event:update\ndata:Form has been selected, form information has been prepared\n\n"
+        
+        # step 3: 生成SQL推理过程
+        yield "event:step3\ndata:生成 SQL 推理过程\n\n"
+        logger.warning("3. 生成 SQL 推理过程解释")
+        reasoning = generate_sql_reasoning(optimized_query, table_info)
+        async for chunk in reasoning:
+            yield chunk
+        # yield f"event:update\ndata:evidence for generate: {reasoning}\n\n"
+        
+        # step 4: 生成SQL
+        yield "event:step4\ndata:生成 sql 并提取\n\n"
+        logger.warning("4. 生成 sql 并提取")
+        sql_query = await generate_sql(optimized_query, table_info, reasoning)
+        yield f"event:update\ndata:{sql_query}\n\n"
+
+        # step 5: 执行SQL
+        yield "event:step5\ndata: 执行 sql\n\n"
+        logger.warning("5. 执行 sql")
+        db_type = "prod"
+        conn = get_db_connection(db_type)
+        cursor = conn.cursor()
+        
+        cursor.execute(sql_query)
+        results = cursor.fetchall()
+        yield f"event:update\ndata:SQL执行成功，获取到{len(results)}条结果\n\n"
+
+        # step 6: 格式化结果
+        yield "event:step6\ndata:格式化结果\n\n"
+        logger.warning("6.格式化结果")
+        formatted_results = format_results(results)
+        yield f"event:update\ndata:{formatted_results}\n\n"
+        
+        # step 7: 保存结果
+        yield "event:step7\ndata:保存结果\n\n"
+        logger.warning("7. 保存结果")
+        add_message_to_chat(chat_id, "assistant", f"SQL查询结果:\n{formatted_results}")
+        yield "event:update\ndata:结果已保存到对话历史\n\n"
+        
+    except Exception as e:
+        logger.error(f"SQL执行失败: {e}")
+        yield f"event:ERROR\ndata:SQL执行失败: {str(e)}\n\n"
+    finally:
+        if conn:
+            release_db_connection(conn,db_type=db_type)
     

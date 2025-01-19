@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 # 在程序启动时加载 .env 文件
-load_dotenv()
+load_dotenv(override=True)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
@@ -15,7 +15,11 @@ app = FastAPI(
             "name": "Dev",
             "description": "这是开发环境相关的 API，用于测试和调试。请不要直接在系统中使用dev下的接口"
         }
-    ]
+    ],
+    docs_url=f"/api/docs",
+    openapi_url="/api/openapi.json",
+    redoc_url=None
+
     )
 
 # 配置 CORS TODO

@@ -1,14 +1,16 @@
+import asyncio
 from fastapi import APIRouter, Query, HTTPException, Response, File, UploadFile
-from fastapi.responses import StreamingResponse
+# from fastapi.responses import StreamingResponse
+from starlette.responses import StreamingResponse
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id, get_analysis_by_question_id
-from services.chat_service import chat_with_ai, create_chat_id, get_chat_id_list_from_db
+from services.chat_service import chat_with_ai, create_chat_id, get_chat_id_list_from_db, chat_with_ai_analysis
 from services.voice_service import text_to_speech, speech_to_text, clone_voice
 from models.question import Question
 from models.law import LawSlice
-from models.chat import ChatRequest
+from models.chat import ChatAnalysisRequest, ChatTrainRequest
 from models.analysis import AnalysisResponse
 from models.common import ChatIdResponse, TTSRequest, VoiceCloneRequest, ChatIdListResponse
-
+from typing import AsyncIterator
 
 # 创建路由器
 api_router = APIRouter(prefix="/api")
@@ -39,7 +41,7 @@ async def law_slices(questionid: int = Query(..., description="题目ID")):
         raise HTTPException(status_code=5000, detail=str(e))
     
 @api_router.post("/chat/train")
-async def chat_train(request: ChatRequest):
+async def chat_train(request: ChatTrainRequest):
     """
     SSE 接口，用于学习时与 AI 聊天。
     """
@@ -50,14 +52,15 @@ async def chat_train(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/chat/analysis")
-async def chat_train(request: ChatRequest):
+async def chat_analysis(request: ChatAnalysisRequest):
     """
-    use chat for search data or sth
+    SSE 接口，用于分析时与 AI 聊天。
     """
     try:
-        #TODO
-
-        return None
+        return StreamingResponse(
+            content=chat_with_ai_analysis(request),
+            media_type="text/event-stream"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

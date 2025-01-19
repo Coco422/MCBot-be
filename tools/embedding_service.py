@@ -6,7 +6,7 @@ import aiohttp
 import asyncio
 
 # ----------配置日志-------------
-from utils.ray_logger import LoggerHandler
+from tools.ray_logger import LoggerHandler
 log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # -----------日志配置完成----------

@@ -8,12 +8,12 @@ from typing import List, Dict, AsyncIterator
 import json
 import time
 
-from utils.utils import deprecated
+from tools.utils import deprecated
 
 from openai import AsyncOpenAI, OpenAI
 
 # ----------配置日志-------------
-from utils.ray_logger import LoggerHandler
+from tools.ray_logger import LoggerHandler
 log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # -----------日志配置完成----------
@@ -27,7 +27,7 @@ async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_
     """
     api_key=os.getenv("ray_ai_api_key_free")
     base_url=os.getenv("ray_ai_base_url")
-    model_id=os.getenv("ai_chat_model")
+    model_id=os.getenv("hw_ai_chat_model_72")
 
 
     # 假如方法中传入参数 system prompt 则在 messages 最前面加上，否则加上默认提示词
@@ -84,8 +84,8 @@ async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_
 
                     content = chunk.get('choices', [{}])[0].get('delta', {}).get('content', '')
                     if content:  # 仅处理非空内容
-                        print(content, end="", flush=True)  # 打印机效果逐字符输出
                         yield f"event: Update\ndata: {content}\n\n"
+                        print(content, end="", flush=True)  # 打印机效果逐字符输出
                 except json.JSONDecodeError:
                     # 如果 JSON 不完整，等待下一行继续拼接
                     continue
@@ -106,7 +106,7 @@ async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system
     
     api_key=os.getenv("ray_ai_api_key_free")
     base_url=os.getenv("ray_ai_base_url")
-    model_id=os.getenv("ai_chat_model")
+    model_id=os.getenv("hw_ai_chat_model_72")
 
         # 假如方法中传入参数 system prompt 则在 messages 最前面加上，否则加上默认提示词
     if not system_prompt and messages[0]["role"] != "system":
@@ -137,6 +137,64 @@ async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system
         yield f"event: Update\ndata: {chunk.choices[0].delta.content}\n\n"
     end_time = time.time()
     print(f"all out put Consume time:{end_time - start_time}")
+
+async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str = "", if_json: bool = False) -> str:
+    """
+    获取 OpenAI 聊天模型的完整响应（非流式）
+    :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
+    :param system_prompt: 系统提示词
+    :param if_json: 是否返回JSON格式的响应，如果为True则解析并返回SQL或SQL键的值
+    :return: 返回完整的聊天响应内容或解析后的SQL语句
+    """
+    model_name = os.getenv("hw_ai_chat_model_72")
+    logger.info(f"Using model: {model_name}")
+    
+    # 初始化 LangChain 的 ChatOpenAI
+    llm = ChatOpenAI(
+        model=model_name,
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+        api_key=os.getenv("ray_ai_api_key_free"),
+        base_url=os.getenv("ray_ai_base_url"),
+    )
+    
+    # 添加系统提示词
+    if not system_prompt and messages[0]["role"] != "system":
+        system_message = {
+            "role": "system",
+            "content": "You are an AI assistant that helps people with their questions."
+        }
+        messages.insert(0, system_message)
+    else:
+        system_message = {
+            "role": "system",
+            "content": system_prompt
+        }
+        messages.insert(0, system_message)
+
+    start_time = time.time()
+    try:
+        # 配置chain
+        if if_json:
+            from langchain_core.output_parsers import JsonOutputParser
+            chain = llm | JsonOutputParser()
+            response = await chain.ainvoke(messages)
+        else:
+            response = await llm.ainvoke(messages)
+        
+        # 记录性能指标
+        end_time = time.time()
+        time_diff_ms = (end_time - start_time) * 1000
+        logger.info(f"LLM response time: {time_diff_ms:.2f} ms")
+        
+        logger.debug(response.content if hasattr(response, 'content') else response)
+    
+        return response.content if hasattr(response, 'content') else response
+    except Exception as e:
+        logger.error(f"Error getting chat response: {str(e)}")
+        raise
 
 async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
     """
@@ -204,3 +262,4 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     # 将字典转换为 JSON 字符串
     json_string = json.dumps(response_dict, ensure_ascii=False)
     yield f"event: Done\ndata: {json_string}\n\n"
+

@@ -1,7 +1,7 @@
 from pydantic import BaseModel,Field
 from typing import Optional, List
 
-class ChatRequest(BaseModel):
+class ChatTrainRequest(BaseModel):
     """
     /chat/train 接口的请求体模型
     """
@@ -17,6 +17,19 @@ class ChatRequest(BaseModel):
     lows: Optional[List[str]] = Field(None, description="相关法条（可选）")
     question: Optional[str] = Field(None, description="题目内容（可选）")
     options: Optional[List[str]] = Field(None, description="题目选项（可选）")
+
+class ChatAnalysisRequest(BaseModel):
+    """
+    /chat/analysis 接口的请求体模型
+    """
+    user_input: str = Field(..., description="用户输入的内容")
+    chat_id: Optional[str] = Field(
+        'f47e82a1-1878-453f-81e9-e9641773abd6',
+        description="必须传入对话 uuid。否则存入默认 uuid 为测试用 id 会查不到历史记录"
+    )
+    database_id: Optional[str]= Field(
+        description="可选数据库的 标识"
+    )
 
 # 定义响应模型
 class ChatResponse(BaseModel):
