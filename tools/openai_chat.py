@@ -84,7 +84,7 @@ async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_
 
                     content = chunk.get('choices', [{}])[0].get('delta', {}).get('content', '')
                     if content:  # 仅处理非空内容
-                        yield f"event: Update\ndata: {content}\n\n"
+                        yield f"event:update\ndata:{content}\n\n"
                         print(content, end="", flush=True)  # 打印机效果逐字符输出
                 except json.JSONDecodeError:
                     # 如果 JSON 不完整，等待下一行继续拼接
@@ -134,7 +134,7 @@ async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system
         print("in openai",end=":")
         print(chunk.choices[0].delta)
          # 实时推送数据到客户端
-        yield f"event: Update\ndata: {chunk.choices[0].delta.content}\n\n"
+        yield f"event:update\ndata:{chunk.choices[0].delta.content}\n\n"
     end_time = time.time()
     print(f"all out put Consume time:{end_time - start_time}")
 
@@ -247,7 +247,7 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
             full = chunk
             flag=0
         full += chunk
-        yield f"event: Update\ndata: {chunk.content}\n\n" # 假设 AIMessageChunk 有 content 属性
+        yield f"event:update\ndata:{chunk.content}\n\n" # 假设 AIMessageChunk 有 content 属性
     end_time = time.time()
     readable_ft_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time)) + f".{int(end_time * 1000) % 1000:03d}"
     time_diff_ms = (end_time - start_time) * 1000  # 转换为毫秒
@@ -261,5 +261,5 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     }
     # 将字典转换为 JSON 字符串
     json_string = json.dumps(response_dict, ensure_ascii=False)
-    yield f"event: Done\ndata: {json_string}\n\n"
+    yield f"event: Done\ndata:{json_string}\n\n"
 
