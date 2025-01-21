@@ -498,18 +498,21 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
     try:
         # step 1: 优化用户问题
         yield "event:step1\ndata:优化用户的问题\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("1. 开始优化用户的问题")
         optimized_query = await optimize_query_with_llm(user_query)
         yield f"event:update\ndata:{optimized_query}\n\n"
-        
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 2: 选择表格
         yield "event:step2\ndata:选择表格中\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("2. 选择表格，返回表格信息")
         table_info = await select_table(optimized_query)
         yield f"event:update\ndata:Form has been selected, form information has been prepared\n\n"
-        
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 3: 生成SQL推理过程
         yield "event:step3\ndata:生成 SQL 推理过程\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("3. 生成 SQL 推理过程解释")
         reasoning = generate_sql_reasoning(optimized_query, table_info)
         async for chunk in reasoning:
@@ -518,12 +521,14 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         
         # step 4: 生成SQL
         yield "event:step4\ndata:生成 sql 并提取\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("4. 生成 sql 并提取")
         sql_query = await generate_sql(optimized_query, table_info, reasoning)
         yield f"event:update\ndata:{sql_query}\n\n"
-
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 5: 执行SQL
         yield "event:step5\ndata: 执行 sql\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("5. 执行 sql")
         db_type = "prod"
         conn = get_db_connection(db_type)
@@ -532,22 +537,25 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         cursor.execute(sql_query)
         results = cursor.fetchall()
         yield f"event:update\ndata:SQL执行成功，获取到{len(results)}条结果\n\n"
-
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 6: 格式化结果
         yield "event:step6\ndata:格式化结果\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("6.格式化结果")
         formatted_results = await format_results(results, sql_query)
         yield f"event:update\ndata:格式化成功\n\n"
         # yield f"event:update\ndata:{formatted_results}\n\n"
-        
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 7: 保存结果
         yield "event:step7\ndata:保存结果\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("7. 保存结果")
         add_message_to_chat(chat_id, "assistant", f"SQL查询结果:\n{formatted_results}")
         yield "event:update\ndata:结果已保存到对话历史\n\n"
-        
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 8: 最终输出
         yield "event:step8\ndata:最终输出\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("8. 最终输出")
         final_output_from_llm = final_output(optimized_query, formatted_results)
         async for chunk_output in final_output_from_llm:
