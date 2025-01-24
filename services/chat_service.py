@@ -294,6 +294,9 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
         # 保存 AI 回复到历史记录
         # 假设 add_message_to_chat 是你的函数
         add_message_to_chat(request.chat_id, "assistant", content)
+    except json.JSONDecodeError as e:
+        logger.error("json 解析失败")
+        pass
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
 
@@ -316,72 +319,37 @@ async def select_table(query: str) -> dict:
     # 这里可以根据数据库schema信息选择表格
     # 示例实现，实际应根据具体数据库schema调整
     return """
-[DB_ID] exam_course
+[DB_ID] tobacco
 [Schema]
-# Table: exam_course
+# Table: exam_question
 [
-  (id:INTEGER, Primary Key, the unique identifier of the exam course, Auto-increment, Examples: [1, 2, 3]),
-  (arrangename:TEXT, the name of the exam arrangement, Not Null, Examples: ['Mid-term Exam', 'Final Exam']),
-  (courseid:INTEGER, the ID of the course (referred from qht_course table), Not Null, Examples: [101, 102]),
-  (userids:TEXT, the IDs of the users arranged (referred from qht_userinfo table), Not Null, Examples: ['user1,user2', 'user3,user4']),
-  (departids:TEXT, the IDs of the departments arranged (referred from sys_DepartInfo table), Not Null, Examples: ['dept1,dept2', 'dept3,dept4']),
-  (edituserid:INTEGER, the ID of the user who edited (referred from sys_user table), Not Null, Examples: [201, 202]),
-  (editdatetime:TIMESTAMP, the time when the exam course was edited, Not Null, Examples: ['2024-01-01 10:00:00', '2024-01-02 11:00:00']),
-  (begindate:TIMESTAMP, the start date and time of the exam, Not Null, Examples: ['2024-01-01 09:00:00', '2024-01-02 09:00:00']),
-  (enddate:TIMESTAMP, the end date and time of the exam, Not Null, Examples: ['2024-01-01 11:00:00', '2024-01-02 11:00:00']),
-  (orgid:TEXT, the enterprise ID, Not Null, Examples: ['org001', 'org002']),
-  (createdate:TIMESTAMP, the creation date and time of the exam course, Not Null, Examples: ['2024-01-01 08:00:00', '2024-01-02 08:00:00']),
-  (examcount:INTEGER, the number of times the exam can be taken, Not Null, Examples: [1, 3]),
-  (examcategory:INTEGER, the type of exam arrangement, Not Null, Examples: [1, 2]),
-  (examinstructions:TEXT, the instructions for the exam, Not Null, Examples: ['Read carefully', 'No cheating']),
-  (cshow:INTEGER, the display mode (0: all departments, 1: department internal, 2: personal private), Not Null, Examples: [0, 1, 2]),
-  (remark:TEXT, remarks, Not Null, Examples: ['Important', 'Urgent']),
-  (roleids:TEXT, the IDs of the roles, Not Null, Examples: ['role1,role2', 'role3,role4']),
-  (groupids:TEXT, the IDs of the groups, Not Null, Examples: ['group1,group2', 'group3,group4']),
-  (postids:TEXT, the IDs of the posts, Not Null, Examples: ['post1,post2', 'post3,post4'])
-]
-[DB_ID] qht_userinfo
-[Schema]
-# Table: qht_userinfo
-[
-  (id:INT, Primary Key, the unique identifier of the user, Examples: [1, 2, 3]),
-  (username:NVARCHAR(300), the username of the user, Examples: ['user1', 'user2']),
-  (realname:NVARCHAR(100), the real name of the user, Examples: ['Real Name 1', 'Real Name 2']),
-  (userpass:NVARCHAR(300), the password of the user, Examples: ['pass123', 'pass456']),
-  (newpassword:NVARCHAR(300), the new password of the user, Examples: ['newPass123', 'newPass456']),
-  (gender:INT, the gender of the user (1: Male, 0: Female, 2: Unknown), Examples: [1, 0, 2]),
-  (userscore:INT, the score of the user, Examples: [100, 200]),
-  (qqnumber:NVARCHAR(30), the QQ number of the user, Examples: ['12345', '67890']),
-  (email:NVARCHAR(100), the email of the user, Examples: ['user1@example.com', 'user2@example.com']),
-  (mobilephone:NVARCHAR(100), the mobile phone number of the user, Examples: ['1234567890', '0987654321']),
-  (userimage:NVARCHAR(1000), the image URL of the user, Examples: ['http://example.com/image1.jpg', 'http://example.com/image2.jpg']),
-  -- Add other fields similarly...
-  (orgid:NVARCHAR(300), the organization ID of the user, Examples: ['org1', 'org2']),
-  (departid:INT, Maps to sys_departinfo(id), the department ID of the user, Examples: [1, 18, 26])
-]
-[Foreign keys]
-qht_userinfo.departid=sys_departinfo.id
+  (id:INTEGER, Primary Key, the unique identifier of the exam question, Auto-increment, Examples:[1, 2, 3814]),
+  (question:TEXT, the question text, Examples:["25据《烟草专卖法》的规定，烟草专卖行政主管部门主要负责查处下列案件（      ）。"]),
+  (solution:TEXT, the solution text, Examples:["C|D"]),
+  (options:TEXT, the options text, Examples:["A.假冒商标卷烟|B.无烟草专卖零售许可证经营烟草专卖品|C.违法收购烟叶|D.无证运输烟草专卖品"]),
+  (slice_no:INTEGER, the related slice chapter number, Optional, Examples:[1, 2, 5]),
+  (law_content:TEXT, the law content related to the question, Examples:["第三十三条 生产、销售没有注册商标的卷烟、雪茄烟、有包装的烟丝的，由工商行政管理部门责令停止生产、销售，并处罚款。  
 
-[DB_ID] sys_departinfo
+生产、销售假冒他人注册商标的烟草制品的，由工商  
+
+行政管理部门责令停止侵权行为，赔偿被侵权人的损失，可以并处罚款；构成犯罪的，依法追究刑事责任。
+第二十条的规定，非法印制烟草制品商标标识的，由工商行政管理部门销毁印制的商标标识，没收违法所得，并处罚款。
+第三十条 有关部门依法查获的假冒商标烟草制品，应当交由烟草专卖行政主管部门按照国家有关规定公开销毁，禁止以任  
+
+何方式销售。
+第一条 生产、销售伪劣卷烟、雪茄烟等烟草专卖品，销售金额在五万元以上的，依照刑法第一百四十条的规定，以生产、销售伪劣产品罪定罪处罚。未经卷烟、雪茄烟等烟草专卖品注册商标所有人许可，在卷烟、雪茄烟等烟草专卖品上使用与其注册商标相同的商标，情节严重的，依照刑法第二百一十三条的规定，以假冒注册商标罪定罪处罚。销售明知是假冒他人注册商标的卷烟、雪茄烟等烟草专卖品，销售金额较大的，依照刑法第二百一十四条的规定，以销售假冒注册商标的商品罪定罪处罚。伪造、擅自制造他人卷烟、雪茄烟注册商标标识或者销售伪造、擅自制造的卷烟、雪茄烟注册商标标识，情节严重的，依照刑法第二百一十五条的规定，以非法制造、销售非法制造的注册商标标识罪定罪处罚。违反国家烟草专卖管理法律法规，未经烟草专卖行政主管部门许可，无烟草专卖生产企业许可证、烟草专卖批发企业许可证、特种烟草专卖经营企业许可证、烟草专卖零售许可证等许可证明，非法经营烟草专卖品，情节严重的，依照刑法第二百二十五条的规定，以非法经营罪定罪处罚。
+第十九条 卷烟、雪茄烟和有包装的烟丝必须申请商标注册，未经核准注册的，不得生产、销售。  
+
+禁止生产、销售假冒他人注册商标的烟草制品。"])
+]
+
+[DB_ID] tobacco
 [Schema]
-# Table: sys_departinfo
+# Table: exam_user_answer
 [
-  (id:INT, Primary Key, the unique identifier of the department, Examples: [1, 2, 3]),
-  (typename:NVARCHAR(300), the name of the department, Examples: ['Department 1', 'Department 2']),
-  (parentid:INT, Maps to sys_departinfo(id), the parent department ID, Examples: [0, 1]),
-  (typeorder:INT, the order of the department, Examples: [1, 2]),
-  (deleted:INT, whether the department is deleted (1: Deleted, 0: Not Deleted), Examples: [0, 1]),
-  (edituserid:INT, the ID of the user who last edited the department, Examples: [1, 2]),
-  (editdatetime:DATE, the date and time when the department was last edited, Examples: ['2024-01-01', '2024-02-01']),
-  (orgid:NVARCHAR(300), the organization ID of the department, Examples: ['org1', 'org2']),
-  (wechat_id:INT, the WeChat ID of the department, Examples: [1, 2]),
-  (wechat_parentid:INT, the WeChat parent ID of the department, Examples: [0, 1]),
-  (cshow:INT, the display setting of the department (0: All, 1: Internal, 2: Private), Examples: [0, 1, 2]),
-  (logoimg:NVARCHAR(1000), the logo image URL of the department, Examples: ['http://example.com/logo1.jpg', 'http://example.com/logo2.jpg']),
-  (loginbg:NVARCHAR(1000), the login background image URL of the department, Examples: ['http://example.com/bg1.jpg', 'http://example.com/bg2.jpg']),
-  (logotitle:NVARCHAR(100), the title of the department logo, Examples: ['Logo Title 1', 'Logo Title 2']),
-  (roma_stru_code:NVARCHAR(300), the ROMA structure code of the department, Examples: ['code1', 'code2']),
-  (roma_full_name:NVARCHAR(1000), the full name in ROMA format of the department, Examples: ['Full Name 1', 'Full Name 2'])
+  (questionid:INTEGER, NOT NULL, the question identifier, Maps to exam_question.id, Examples:[1, 2, 3]),
+  (score:NUMERIC(9,2), NOT NULL, the score of the answer, Examples:[2, 3.33]),
+   (examuserrecordid:VARCHAR(100), the GUID value of the exam record,  Examples:["cc4fc0e4344547dcab5b6e19083c1bdc"])
 ]
 """
 
@@ -456,31 +424,41 @@ remember only output the sql by json.Do not explain
         return llm_response.get("sql") or llm_response.get("SQL") or llm_response
     return llm_response
 
-async def format_results(results: List[tuple], sql_query: str) -> str:
+async def format_results(results: List[tuple], sql_query: str, user_query: str) -> str:
     """
     格式化SQL查询结果
     """
     if not results:
         return "查询结果集无内容"
     
-    # 构造messages，要求LLM根据SQL语句和查询结果输出标准的Markdown格式表格
+    # 构造messages，要求LLM根据SQL语句和查询结果输出前端绘图用数据
     messages = [{
         "role": "user",
         "content": f"""
-        请根据以下SQL查询和结果生成一个标准的Markdown格式表格：
-        
-        SQL查询：
-        {sql_query}
-        
-        查询结果：
-        {results}
-        
-        请确保表格包含所有列和行，并以易读的方式呈现数据，注意表头和sql查询语句需要对应。
-        请只返回Markdown格式的表格，不需要其他解释。
+接下来给到你的是一个 SQL 查询语句 、一个 SQL 查询结果、以及用户查询的问题
+你需要根据结果输出标准的 json 样式，用来画柱状图
+样式样例如下
+帮我查询第一周的考试数量
+{{"categories": ["Mon1", "Tue1", "Wed1", "Thu1", "Fri1", "Sat1", "Sun1"],
+"values": [120, 200, 150, 80, 70, 110, 130]}}
+你需要输出这样子的格式{{"categories":[],"values":[]}}
+---
+SQL查询：
+{sql_query}
+---
+查询结果：
+{results}
+---
+用户查询问题
+{user_query}
+---
+接下来输出标准的 json 结构
+请确保你必须输出这样的格式，包含categories和values两个键，里面是数组{{"categories":[],"values":[]}}
         """
     }]
     
-    llm_response = await get_chat_response(messages)
+    logger.debug(messages)
+    llm_response = await get_chat_response(messages,if_json=True)
     
     return llm_response
 
@@ -490,6 +468,7 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
     :param request: 包含用户输入和数据库ID的请求
     :return: 返回查询结果的流式响应
     """
+    conn = None 
     # 预留设计
     database_id = request.database_id
     user_query = request.user_input
@@ -526,6 +505,7 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         sql_query = await generate_sql(optimized_query, table_info, reasoning)
         yield f"event:update\ndata:{sql_query}\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
+
         # step 5: 执行SQL
         yield "event:step5\ndata: 执行 sql\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
@@ -536,16 +516,20 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         
         cursor.execute(sql_query)
         results = cursor.fetchall()
+        logger.debug(results)
         yield f"event:update\ndata:SQL执行成功，获取到{len(results)}条结果\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
+
         # step 6: 格式化结果
         yield "event:step6\ndata:格式化结果\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("6.格式化结果")
-        formatted_results = await format_results(results, sql_query)
-        yield f"event:update\ndata:格式化成功\n\n"
-        # yield f"event:update\ndata:{formatted_results}\n\n"
+        formatted_results = await format_results(results, sql_query, optimized_query)
+        yield f"event:sqldata\ndata:{formatted_results}\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
+        yield f"event:update\ndata:格式化成功\n\n"
+        await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
+
         # step 7: 保存结果
         yield "event:step7\ndata:保存结果\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒

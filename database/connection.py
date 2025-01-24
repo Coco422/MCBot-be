@@ -16,6 +16,7 @@ DB_CONFIGS = {
         "user": os.getenv("Pord_DB_USER"),
         "password": os.getenv("Pord_DB_PASSWORD"),
         "database": os.getenv("Pord_DB_NAME"),
+        "options": "-c search_path=tobacco,public",  # 添加 search_path
     }
 }
 

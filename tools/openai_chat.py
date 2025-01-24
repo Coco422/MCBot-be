@@ -25,7 +25,7 @@ async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
-    api_key=os.getenv("ray_ai_api_key_free")
+    api_key=os.getenv("ray_ai_api_key_default")
     base_url=os.getenv("ray_ai_base_url")
     model_id=os.getenv("hw_ai_chat_model_72")
 
@@ -104,7 +104,7 @@ async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     
-    api_key=os.getenv("ray_ai_api_key_free")
+    api_key=os.getenv("ray_ai_api_key_default")
     base_url=os.getenv("ray_ai_base_url")
     model_id=os.getenv("hw_ai_chat_model_72")
 
@@ -156,7 +156,7 @@ async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str =
         max_tokens=None,
         timeout=None,
         max_retries=2,
-        api_key=os.getenv("ray_ai_api_key_free"),
+        api_key=os.getenv("ray_ai_api_key_default"),
         base_url=os.getenv("ray_ai_base_url"),
     )
     
@@ -212,7 +212,7 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
         max_tokens=None,
         timeout=None,
         max_retries=2,
-        api_key=os.getenv("ray_ai_api_key_free"),
+        api_key=os.getenv("ray_ai_api_key_default"),
         base_url=os.getenv("ray_ai_base_url"),
     )
         
