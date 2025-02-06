@@ -265,9 +265,9 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
     # 预留设计
     database_id = request.database_id
     user_query = request.user_input
-    await add_message_to_chat(request.chat_id, "user", user_query)
     chat_id = request.chat_id
-    
+    history = get_chat_history(chat_id)
+    await add_message_to_chat(chat_id, "user", user_query)
     try:
         # step 1: 优化用户问题
         yield "event:step1\ndata:优化用户的问题\n\n"
@@ -328,7 +328,6 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         yield "event:step7\ndata:保存结果\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("7. 保存结果")
-        await add_message_to_chat(chat_id, "assistant", f"SQL查询结果:\n{formatted_results}")
         yield "event:update\ndata:结果已保存到对话历史\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 8: 最终输出
@@ -338,7 +337,8 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         final_output_from_llm = final_output(optimized_query, formatted_results)
         async for chunk_output in final_output_from_llm:
             yield chunk_output
-        
+
+        await add_message_to_chat(chat_id, "assistant", chunk_output)
     except Exception as e:
         logger.error(f"SQL执行失败: {e}")
         yield f"event:ERROR\ndata:SQL执行失败: {str(e)}\n\n"

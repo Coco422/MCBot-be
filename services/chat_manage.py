@@ -94,22 +94,27 @@ def get_chat_history(chat_id):
     
     return CHAT_HISTORY_MAP[chat_id]["history"]  # Return empty list if no history found
 
-def get_chat_id_list_from_db(user_id:str)->list:
-    """从数据库检索 user_id 所包含的 chat_id"""
+def get_chat_title_list_from_db(user_id: str) -> list:
+    """从数据库检索 user_id 所包含的 chat_id 和对应的 title"""
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         query = """
-        SELECT chat_id FROM tobacco.chat_history
+        SELECT 
+            chat_id, 
+            messages->>'title' AS title
+        FROM tobacco.chat_history
         WHERE user_id = %s
         ORDER BY created_at DESC;
         """
         cursor.execute(query, (user_id,))
         results = cursor.fetchall()
-        return [row[0] for row in results] if results else []
+        
+        # 处理查询结果，将 chat_id 和 title 作为字典形式返回
+        return [{"chat_id": row[0], "title": row[1]} for row in results] if results else []
     except Exception as e:
-        logger.error(f"获取chat_id列表失败: {e}")
+        logger.error(f"获取 chat_id 和 title 列表失败: {e}")
         return []
     finally:
         if conn:
