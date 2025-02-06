@@ -39,4 +39,4 @@ class ChatResponse(BaseModel):
 # 聊天历史模型
 class ChatHistoryResponse(BaseModel):
     chat_id: str = Field(..., description="对话的唯一标识")
-    messages: Optional[List[dict]] = Field(None, description="对话历史记录")
+    messages: Optional[dict] = Field(None, description="对话历史记录,包含用户输入和机器回复以及标题", example={'history': [{'role': 'assistant', 'content': '根据《广西壮族自治区烟草专卖管理条例》的相关规定，取得烟草专卖零售许可证的单位或个人，必须在当地烟草专卖批发企业进货，并接受烟草专卖行政主管部门的监督管理。这是为了确保烟草制品的合法流通和市场秩序。'}], 'title': '"cigarette regulations 🚬"'})

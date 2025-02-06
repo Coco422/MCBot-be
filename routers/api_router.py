@@ -31,7 +31,6 @@ async def random_question(questionid: int = Query(..., description="题目ID")):
         return get_random_question(questionid)
     except Exception as e:
         raise HTTPException(status_code=5000, detail=str(e))
-    
 
 # 题目对应法条切片接口
 @api_router.get("/lows", response_model=list[LawSlice])
@@ -40,46 +39,6 @@ async def law_slices(questionid: int = Query(..., description="题目ID")):
         return get_law_slices_by_question_id(questionid)
     except Exception as e:
         raise HTTPException(status_code=5000, detail=str(e))
-    
-@api_router.post("/chat/train")
-async def chat_train(request: ChatTrainRequest):
-    """
-    SSE 接口，用于学习时与 AI 聊天。
-    """
-    try:
-        # 返回 StreamingResponse
-        return StreamingResponse(content = chat_with_ai(request),media_type="text/event-stream",)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.post("/chat/analysis")
-async def chat_analysis(request: ChatAnalysisRequest):
-    """
-    SSE 接口，用于分析时与 AI 聊天。
-    """
-    try:
-        return StreamingResponse(
-            content=chat_with_ai_analysis(request),
-            media_type="text/event-stream"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.post("/tts")
-async def generate_tts(request: TTSRequest):
-    """
-    生成文字转语音
-
-    - **tts_text**: 需要转换为语音的文本
-    - **返回**: 语音数据 (audio/mpeg)
-    """
-    try:
-        #TODO 暂未完成自定义说话人等
-
-        audio_data = await text_to_speech(request.tts_text)
-        return Response(content=audio_data, media_type="audio/mpeg")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/analysis", response_model=AnalysisResponse)
 async def analysis(questionid: int = Query(..., description="题目ID")):
@@ -165,5 +124,45 @@ async def clone_voice_endpoint(request: VoiceCloneRequest):
         return Response(content=audio_data, media_type="audio/mpeg")
     except HTTPException as e:
         raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/chat/train")
+async def chat_train(request: ChatTrainRequest):
+    """
+    SSE 接口，用于学习时与 AI 聊天。
+    """
+    try:
+        # 返回 StreamingResponse
+        return StreamingResponse(content = chat_with_ai(request),media_type="text/event-stream",)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/chat/analysis")
+async def chat_analysis(request: ChatAnalysisRequest):
+    """
+    SSE 接口，用于分析时与 AI 聊天。
+    """
+    try:
+        return StreamingResponse(
+            content=chat_with_ai_analysis(request),
+            media_type="text/event-stream"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/tts")
+async def generate_tts(request: TTSRequest):
+    """
+    生成文字转语音
+
+    - **tts_text**: 需要转换为语音的文本
+    - **返回**: 语音数据 (audio/mpeg)
+    """
+    try:
+        #TODO 暂未完成自定义说话人等
+
+        audio_data = await text_to_speech(request.tts_text)
+        return Response(content=audio_data, media_type="audio/mpeg")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

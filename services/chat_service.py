@@ -446,8 +446,7 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
         content = data["content"]
 
         # 保存 AI 回复到历史记录
-        # 假设 add_message_to_chat 是你的函数
-        add_message_to_chat(request.chat_id, "assistant", content)
+        await add_message_to_chat(request.chat_id, "assistant", content)
     except json.JSONDecodeError as e:
         logger.error("json 解析失败")
         pass

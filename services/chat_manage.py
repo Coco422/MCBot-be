@@ -1,4 +1,6 @@
+import json
 from database.connection import get_db_connection, release_db_connection
+from services.chat_utils import generate_title
 import uuid
 from psycopg2.extras import Json
 
@@ -70,13 +72,28 @@ def load_chat_from_db(chat_id):
 
 def get_chat_history(chat_id):
     """获取对话历史（优先从内存中获取，内存中没有则从数据库加载）"""
-    if chat_id in CHAT_HISTORY_MAP:
-        return CHAT_HISTORY_MAP[chat_id]
-    else:
-        messages = load_chat_from_db(chat_id)
-        if messages:
-            CHAT_HISTORY_MAP[chat_id] = messages
-        return messages
+        # Initialize chat history structure if it doesn't exist
+    if chat_id not in CHAT_HISTORY_MAP:
+        CHAT_HISTORY_MAP[chat_id] = {
+            "history": [],
+            "title": None
+        }
+
+    # Return from memory if exists
+    if CHAT_HISTORY_MAP[chat_id]["history"]:
+        return CHAT_HISTORY_MAP[chat_id]["history"]
+    
+    messages = load_chat_from_db(chat_id)
+    if messages:
+        try:
+            messages_json = json.loads(messages)
+            CHAT_HISTORY_MAP[chat_id]["history"] = messages_json["history"]
+            return CHAT_HISTORY_MAP[chat_id]["history"]
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.error(f"Failed to parse chat history: {e}")
+            return []
+    
+    return CHAT_HISTORY_MAP[chat_id]["history"]  # Return empty list if no history found
 
 def get_chat_id_list_from_db(user_id:str)->list:
     """从数据库检索 user_id 所包含的 chat_id"""
@@ -99,11 +116,18 @@ def get_chat_id_list_from_db(user_id:str)->list:
         if conn:
             release_db_connection(conn)
 
-def add_message_to_chat(chat_id, role, content):
+async def add_message_to_chat(chat_id, role, content):
     """向对话历史中添加消息"""
     if chat_id not in CHAT_HISTORY_MAP:
-        CHAT_HISTORY_MAP[chat_id] = []
-    CHAT_HISTORY_MAP[chat_id].append({"role": role, "content": content})
+        CHAT_HISTORY_MAP[chat_id] = {
+            "history": [],  # 存储对话记录
+            "title": None   # 初始默认为空
+        }
+    CHAT_HISTORY_MAP[chat_id]["history"].append({"role": role, "content": content})
+    # 判断对话历史记录中是否有标题title 存在
+    has_title = CHAT_HISTORY_MAP.get(chat_id, {}).get("title") is not None
+    if not has_title:
+        CHAT_HISTORY_MAP[chat_id]["title"] = await generate_title(CHAT_HISTORY_MAP[chat_id])
     # 同步到数据库
     save_chat_to_db(chat_id, CHAT_HISTORY_MAP[chat_id])
 
