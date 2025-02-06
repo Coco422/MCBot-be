@@ -62,10 +62,10 @@ def load_chat_from_db(chat_id):
         query = "SELECT messages FROM tobacco.chat_history WHERE chat_id = %s;"
         cursor.execute(query, (chat_id,))
         result = cursor.fetchone()
-        return result[0] if result else []
+        return result[0] if result else {}
     except Exception as e:
         logger.error(f"数据库加载失败: {e}")
-        return []
+        return {}
     finally:
         if conn:
             release_db_connection(conn)
@@ -86,8 +86,7 @@ def get_chat_history(chat_id):
     messages = load_chat_from_db(chat_id)
     if messages:
         try:
-            messages_json = json.loads(messages)
-            CHAT_HISTORY_MAP[chat_id]["history"] = messages_json["history"]
+            CHAT_HISTORY_MAP[chat_id]["history"] = messages["history"]
             return CHAT_HISTORY_MAP[chat_id]["history"]
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"Failed to parse chat history: {e}")
@@ -129,6 +128,7 @@ async def add_message_to_chat(chat_id, role, content):
     if not has_title:
         CHAT_HISTORY_MAP[chat_id]["title"] = await generate_title(CHAT_HISTORY_MAP[chat_id])
     # 同步到数据库
+    # print(f"chat_id: {chat_id}, messages: {CHAT_HISTORY_MAP[chat_id]}")
     save_chat_to_db(chat_id, CHAT_HISTORY_MAP[chat_id])
 
 def get_chathis_by_id(chat_id):

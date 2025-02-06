@@ -265,6 +265,7 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
     # 预留设计
     database_id = request.database_id
     user_query = request.user_input
+    await add_message_to_chat(request.chat_id, "user", user_query)
     chat_id = request.chat_id
     
     try:
@@ -327,7 +328,7 @@ async def chat_with_ai_analysis(request: ChatAnalysisRequest) -> AsyncIterator[s
         yield "event:step7\ndata:保存结果\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         logger.warning("7. 保存结果")
-        add_message_to_chat(chat_id, "assistant", f"SQL查询结果:\n{formatted_results}")
+        await add_message_to_chat(chat_id, "assistant", f"SQL查询结果:\n{formatted_results}")
         yield "event:update\ndata:结果已保存到对话历史\n\n"
         await asyncio.sleep(0.01)  # 异步睡眠 10 毫秒
         # step 8: 最终输出
@@ -355,6 +356,8 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
     try:
         # 获取 chat_id
         chat_id = request.chat_id
+        # 加载历史消息
+        history = get_chat_history(chat_id)
 
         # 判断是否开启 RAG
         if request.if_kb:
@@ -417,14 +420,10 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
 {request.user_input}
 """         
                 finally_input = user_input_with_kb
-
         else:
             finally_input = request.user_input
-        # 避免 token 浪费，这里历史记录只存用户的问题，对对话影响不是很大。但是这里后续要改进 TODO
-        add_message_to_chat(chat_id, "user", request.user_input)
-        # 加载历史消息
-        history = get_chat_history(chat_id)
-
+          
+        await add_message_to_chat(chat_id, "user", request.user_input)
         # 构造消息列表
         messages = history.copy()  # 复制历史消息
         messages.append({"role": "user", "content": finally_input})  # 添加当前用户输入
