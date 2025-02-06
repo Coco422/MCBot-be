@@ -106,3 +106,7 @@ def add_message_to_chat(chat_id, role, content):
     CHAT_HISTORY_MAP[chat_id].append({"role": role, "content": content})
     # 同步到数据库
     save_chat_to_db(chat_id, CHAT_HISTORY_MAP[chat_id])
+
+def get_chathis_by_id(chat_id):
+    """根据 chat_id 从数据库获取对话历史"""
+    return load_chat_from_db(chat_id)

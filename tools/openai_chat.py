@@ -198,7 +198,7 @@ async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str =
 
 async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
     """
-    获取 OpenAI 聊天模型的流式响应。堵塞了
+    获取 OpenAI 聊天模型的流式响应
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """

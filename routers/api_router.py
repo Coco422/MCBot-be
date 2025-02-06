@@ -3,11 +3,12 @@ from fastapi import APIRouter, Query, HTTPException, Response, File, UploadFile
 # from fastapi.responses import StreamingResponse
 from starlette.responses import StreamingResponse
 from services.tobacco_study import get_random_question, get_law_slices_by_question_id, get_analysis_by_question_id
-from services.chat_service import chat_with_ai, create_chat_id, get_chat_id_list_from_db, chat_with_ai_analysis
+from services.chat_service import chat_with_ai, chat_with_ai_analysis
+from services.chat_manage import create_chat_id, get_chat_id_list_from_db, get_chathis_by_id
 from services.voice_service import text_to_speech, speech_to_text, clone_voice
 from models.question import Question
 from models.law import LawSlice
-from models.chat import ChatAnalysisRequest, ChatTrainRequest
+from models.chat import ChatAnalysisRequest, ChatTrainRequest, ChatHistoryResponse
 from models.analysis import AnalysisResponse
 from models.common import ChatIdResponse, TTSRequest, VoiceCloneRequest, ChatIdListResponse
 from typing import AsyncIterator
@@ -117,7 +118,20 @@ async def get_chat_id_list_by_user_id(user_id: str = Query(..., description="用
         return {"chat_id_list": chat_id_list}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@api_router.get("/chat_byid", response_model=ChatHistoryResponse)
+async def get_chat_by_id(chat_id: str = Query(..., description="对话的 chat_id")):
+    """
+    用于获取指定 chat_id 的对话历史
+    """
+    try:
+        #TODO 逻辑未鉴权
+        messages = get_chathis_by_id(chat_id)
+        print(f"chat_id: {chat_id}, messages: {messages}")
+        return {"chat_id":chat_id,"messages": messages}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/asr", summary="语音转文本", description="上传音频文件并返回识别后的文本")
 async def transcribe_audio(file: UploadFile = File(...)):
     try:

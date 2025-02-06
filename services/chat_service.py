@@ -435,10 +435,10 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
         full_response = chunk
 
         # 1. 找到 "data: " 的位置
-        data_start = full_response.find("data: ") + len("data: ")
+        data_start = full_response.find("data:") + len("data:")
         # 2. 提取 data 部分
         data_str = full_response[data_start:].strip()
-
+        # print(data_str)
         # 将 data 字符串解析为 JSON 对象
         data = json.loads(data_str)
 

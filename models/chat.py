@@ -35,3 +35,8 @@ class ChatAnalysisRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     status: str = "success"
+
+# 聊天历史模型
+class ChatHistoryResponse(BaseModel):
+    chat_id: str = Field(..., description="对话的唯一标识")
+    messages: Optional[List[dict]] = Field(None, description="对话历史记录")
