@@ -41,3 +41,35 @@ async def get_chat_history():
             cursor.close()
         if connection:
             release_db_connection(connection)
+
+@dev_router.delete("/clear_chat_history")
+async def clear_chat_history():
+    """
+    清空聊天历史记录
+    """
+    connection = None
+    cursor = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # 执行 SQL 查询
+        sql = "TRUNCATE TABLE tobacco.chat_history;"
+        cursor.execute(sql)
+
+        # 提交事务
+        connection.commit()
+
+        return {"status": "success"}
+
+    except Exception as e:
+        # 捕获异常并返回错误信息
+        raise HTTPException(status_code=500, detail=f"清空失败: {str(e)}")
+
+    finally:
+        # 关闭游标并释放连接
+        if cursor:
+            cursor.close()
+        if connection:
+            release_db_connection(connection)

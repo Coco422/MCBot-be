@@ -10,7 +10,7 @@ class ChatTrainRequest(BaseModel):
     if_stream: Optional[bool] = Field(True, description="是否开启流式返回")
     question_id: Optional[int] = Field(None, description="当前询问问题 id")
     chat_id: Optional[str] = Field(
-        'f47e82a1-1878-453f-81e9-e9641773abd5',
+        'f47e1111-1111-1111-1111-111111111111',
         description="必须传入对话 uuid。否则存入默认 uuid 为测试用 id 会查不到历史记录"
     )
     system_prompt: Optional[str] = Field(None, description="系统提示词（可选）")
@@ -24,7 +24,7 @@ class ChatAnalysisRequest(BaseModel):
     """
     user_input: str = Field(..., description="用户输入的内容")
     chat_id: Optional[str] = Field(
-        'f47e82a1-1878-453f-81e9-e9641773abd6',
+        'f47e1111-1111-1111-1111-111111111111',
         description="必须传入对话 uuid。否则存入默认 uuid 为测试用 id 会查不到历史记录"
     )
     database_id: Optional[str]= Field(

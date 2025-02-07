@@ -134,7 +134,10 @@ async def chat_train(request: ChatTrainRequest):
     """
     try:
         # 返回 StreamingResponse
-        return StreamingResponse(content = chat_with_ai(request),media_type="text/event-stream",)
+        return StreamingResponse(
+            content = chat_with_ai(request),
+            media_type="text/event-stream",
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
