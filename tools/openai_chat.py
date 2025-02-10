@@ -196,14 +196,14 @@ async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str =
         logger.error(f"Error getting chat response: {str(e)}")
         raise
 
-async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "") -> AsyncIterator[str]:
+async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "", model_name: str="hw_ai_chat_model_32", if_r1: bool=False) -> AsyncIterator[str]:
     """
     获取 OpenAI 聊天模型的流式响应
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
-
-    model_name = os.getenv("hw_ai_chat_model_32")
+    # 模型名根据传入参数从环境变量中获取，如果环境变量中没有则直接使用传入的参数
+    model_name = os.getenv(model_name) if os.getenv(model_name) else model_name
     logger.info(model_name)
     # 初始化 LangChain 的 ChatOpenAI
     llm = ChatOpenAI(
@@ -224,12 +224,13 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
         }
         messages.insert(0, system_message)
     else:
+        logger.info(f"system_prompt: {system_prompt}")
         system_message = {
             "role": "system",
             "content": system_prompt
         }
         messages.insert(0, system_message)
-
+    # print(messages)
     start_time = time.time()
     # 将时间戳转换为人类可读格式，精确到毫秒
     readable_start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + f".{int(start_time * 1000) % 1000:03d}"

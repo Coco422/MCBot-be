@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
 from routers.api_router import api_router
 from routers.dev_router import dev_router
+from routers.lg_router import lg_router # Import the new router
 from fastapi.middleware.cors import CORSMiddleware
 
 # 初始化 FastAPI 应用
@@ -14,6 +15,10 @@ app = FastAPI(
         {
             "name": "Dev",
             "description": "这是开发环境相关的 API，用于测试和调试。请不要直接在系统中使用dev下的接口"
+        },
+        {
+            "name": "LG",
+            "description": "这是 LG 系统的 API，用于获取 LG 系统的数据"
         }
     ],
     docs_url=f"/api/docs",
@@ -36,6 +41,8 @@ app.include_router(api_router)
 
 # 开发路由
 app.include_router(dev_router)
+
+app.include_router(lg_router)  # Add the new router
 
 # 挂载静态文件目录到根路径
 app.mount("/", StaticFiles(directory="html", html=True), name="static")

@@ -17,6 +17,13 @@ DB_CONFIGS = {
         "password": os.getenv("Pord_DB_PASSWORD"),
         "database": os.getenv("Pord_DB_NAME"),
         "options": "-c search_path=tobacco,public",  # 添加 search_path
+    },
+    "lg": {
+        "host": os.getenv("LG_DB_HOST"),
+        "port": int(os.getenv("LG_DB_PORT")),
+        "user": os.getenv("LG_DB_USER"),
+        "password": os.getenv("LG_DB_PASSWORD"),
+        "database": os.getenv("LG_DB_NAME"),
     }
 }
 
@@ -31,13 +38,18 @@ connection_pools = {
         minconn=1,
         maxconn=10,
         **DB_CONFIGS["prod"]
+    ),
+    "lg": pool.SimpleConnectionPool(
+        minconn=1,
+        maxconn=10,
+        **DB_CONFIGS["lg"]
     )
 }
 
 def get_db_connection(db_type="dev"):
     """
     获取数据库连接
-    :param db_type: 数据库类型，可选 'dev' 或 'prod'
+    :param db_type: 数据库类型，可选 'dev', 'prod', 或 'lg'
     :return: 数据库连接对象
     """
     if db_type not in connection_pools:
@@ -53,7 +65,7 @@ def release_db_connection(connection, db_type="dev"):
     """
     释放数据库连接
     :param connection: 要释放的数据库连接
-    :param db_type: 数据库类型，可选 'dev' 或 'prod'
+    :param db_type: 数据库类型，可选 'dev', 'prod', 或 'lg'
     """
     if db_type not in connection_pools:
         raise ValueError(f"无效的数据库类型: {db_type}")

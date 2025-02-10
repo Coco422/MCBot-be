@@ -350,7 +350,6 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
     """
     与 AI 聊天，返回流式响应。
     :param request: 前端发送的内容
-    :param system_prompt: 系统提示词（可选），如果未提供，则使用默认的系统提示词
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
     try:
