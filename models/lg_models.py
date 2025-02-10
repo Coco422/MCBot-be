@@ -41,3 +41,12 @@ class CaseChatRequest(BaseModel):
         'f47e1111-1111-1111-1111-111111111111',
         description="必须传入对话 uuid。否则存入默认 uuid 为测试用 id 会查不到历史记录"
     )
+
+class GenerateReplyRequest(BaseModel):
+    """
+    /lg/generate_reply 接口的请求体模型
+    """
+    user_input: str = Field(..., description="用户输入的内容")
+    # 查询到的知识库内容
+    kb_content: Optional[str] = Field(None, description="知识库内容")
+

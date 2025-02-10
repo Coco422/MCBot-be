@@ -2,8 +2,9 @@ import json
 from typing import AsyncIterator, List, Optional
 
 from fastapi import HTTPException
-from models.lg_models import CaseChatRequest, CaseIdResponse, CaseInfoResponse
+from models.lg_models import CaseChatRequest, CaseIdResponse, CaseInfoResponse, GenerateReplyRequest
 from database.connection import get_db_connection, release_db_connection
+from tools.embedding_service import embedding_service
 
 
 # ----------配置日志-------------
@@ -39,7 +40,7 @@ async def chat_with_llm(request: CaseChatRequest) -> AsyncIterator[str]:
                 createtime_end=request.case_date_end,
                 caseid=request.case_id
             )
-            __system_prompt = f"以下是供你参考的本次工单个案的信息:\n 工单问题总结描述: {case_info.problemdescription} \n 工单问题总结回复: {case_info.problemreply} \n AI评价: {case_info.response}"
+            __system_prompt = f"以下是供你参考的本次工单个案的信息:\n 工单问题总结描述: {case_info.problemdescription} \n 工单问题总结回复: {case_info.problemreply} \n AI评价: {case_info.ai_comment}"
         else:
             __system_prompt = "用户未提供工单信息"
 
@@ -156,3 +157,34 @@ WHERE
     finally:
         if connection:
             release_db_connection(connection, db_type="lg")
+
+async def get_kb_from_db(text: str) -> Optional[str]:
+    """Perform RAG search using embedding service"""
+    # Get embedding for the question
+    embedding = await embedding_service.get_embedding(text)
+    
+    # Search for similar content in database
+    results = await embedding_service.lg_search_kb_by_chat(embedding)
+    
+    return results
+
+async def generate_reply(request: GenerateReplyRequest):
+    """
+    返回流式AI 生成响应。
+    :param request: 前端发送的内容
+    :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
+    """
+    connection = None
+    try:
+        # 构造消息列表
+        messages = []
+        # 构造系统提示词。任务为参考 用户与客服聊天记录。以及知识点，生成客服接下来的回复
+        __system_prompt = f"以下是供你参考的知识库内容:\n {request.kb_content}"
+
+        messages.append({"role": "user", "content": request.user_input})  # 添加当前用户输入
+        
+        async for chunk in get_chat_response_stream_langchain(messages, model_name="deepseek-r1:32b-qwen-distill-q8_0", system_prompt=__system_prompt):
+            yield chunk
+
+    except Exception as e:
+        raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")

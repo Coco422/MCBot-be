@@ -11,7 +11,7 @@ log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
 # -----------日志配置完成----------
 class EmbeddingService:
-    def __init__(self, model_name: str = "text-embedding-ada-002"):
+    def __init__(self, model_name: str = "bge-m3"):
         self.model_name = model_name
         
     async def get_embedding(self, text: str, max_retries: int = 3) -> List[float]:
@@ -103,6 +103,47 @@ class EmbeddingService:
         finally:
             if conn:
                 release_db_connection(conn)
+
+    async def lg_search_kb_by_chat(self, embedding: List[float]) -> List[dict]:
+        """
+        Search for similar content in LG knowledge base using embedding vector
+
+        Args:
+            embedding (List[float]): Vector embedding to search with
+
+        Returns:
+            List[dict]: List of matching documents with title, content and similarity score
+        """
+        conn = None
+        try:
+            # Validate embedding input
+            if not embedding or not isinstance(embedding, list):
+                logger.error("Invalid embedding input")
+                return []
+                
+            conn = get_db_connection(db_type="lg")
+            cursor = conn.cursor()
+            
+            # 直接传递 embedding 列表给 PostgreSQL
+            query = """
+                SELECT * FROM csm.use_vec_get_top_kgcont(%s::public.vector);
+            """
+            cursor.execute(query, (embedding,))
+            results = cursor.fetchall()
+            
+            return [{
+                "title": row[0],
+                "content": row[1], 
+                "similarity": float(row[2])
+            } for row in results] if results else []
+            
+        except Exception as e:
+            logger.error(f"LG Knowledge base search failed: {e}")
+            return []
+        finally:
+            if conn:
+                release_db_connection(conn,db_type="lg")
+
 
 # Singleton instance
 embedding_service = EmbeddingService()

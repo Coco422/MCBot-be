@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import StreamingResponse
-from models.lg_models import CaseIdResponse, CaseInfoResponse, CaseChatRequest
-from services.lg_service import chat_with_llm, get_case_ids_from_db, get_case_info_from_db
+from models.lg_models import CaseIdResponse, CaseInfoResponse, CaseChatRequest, GenerateReplyRequest
+from services.lg_service import chat_with_llm, get_case_ids_from_db, get_case_info_from_db,get_kb_from_db
 from typing import List
 
 
@@ -45,6 +45,30 @@ async def chat_train(request: CaseChatRequest):
         # 返回 StreamingResponse
         return StreamingResponse(
             content = chat_with_llm(request),
+            media_type="text/event-stream",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@lg_router.get("/search_kb")
+async def search_kb(text: str = Query(..., description="Search text")):
+    """
+    搜索知识库
+    """
+    try:
+        return await get_kb_from_db(text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@lg_router.get("/generate_reply")
+async def generate_reply(request: GenerateReplyRequest):
+    """
+    SSE 接口, 生成回复
+    """
+    try:
+        # 返回 StreamingResponse
+        return StreamingResponse(
+            content = generate_reply(request),
             media_type="text/event-stream",
         )
     except Exception as e:
