@@ -29,7 +29,7 @@ class EmbeddingService:
             Exception: If the request fails after retries.
         """
         # Get the service URL from environment variables
-        service_url = os.getenv("EMBEDDING_SERVICE_URL", "http://172.16.99.32:8989/getBGEencodeByText")
+        service_url = os.getenv("EMBEDDING_SERVICE_URL", "http://172.16.99.91:8989/getBGEencodeByText")
         
         # Prepare the request payload
         payload = {

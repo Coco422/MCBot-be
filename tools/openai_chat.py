@@ -224,7 +224,7 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
         }
         messages.insert(0, system_message)
     else:
-        logger.info(f"system_prompt: {system_prompt}")
+        # logger.info(f"system_prompt: {system_prompt}")
         system_message = {
             "role": "system",
             "content": system_prompt

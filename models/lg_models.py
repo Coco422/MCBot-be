@@ -21,6 +21,7 @@ class CaseInfoResponse(BaseModel):
     callee: Optional[Any] = Field(None, description="被叫")
     caller: str = Field(..., description="主叫")
     calltime: Optional[Any] = Field(None, description="通话时间")
+    kb_content: Optional[str] = Field(None, description="知识库内容")
 
 class CaseChatRequest(BaseModel):
     """
@@ -46,7 +47,18 @@ class GenerateReplyRequest(BaseModel):
     """
     /lg/generate_reply 接口的请求体模型
     """
-    user_input: str = Field(..., description="用户输入的内容")
+    user_input: Optional[str] = Field(..., description="用户输入的内容")
+    chat_history: Optional[List[dict]] = Field(..., description="对话历史记录")
     # 查询到的知识库内容
-    kb_content: Optional[str] = Field(None, description="知识库内容")
+    kb_content: Optional[List[dict]] = Field(None, description="知识库内容")
+    if_r1: Optional[bool] = Field(True, description="是否开启 R1")
 
+class GenerateExtractIssuesReplyRequest(BaseModel):
+    """
+    /lg/generate_extract_issues_reply_by_kb 接口的请求体模型
+    """
+    chat_history: Optional[List[dict]] = Field(..., description="对话历史记录")
+    # 总结出来的问题
+    issues: Optional[List[str]] = Field(None, description="总结出来的问题")
+    kb_content: Optional[str] = Field(None, description="知识库内容")
+    if_r1: Optional[bool] = Field(True, description="是否开启 R1")
