@@ -89,7 +89,7 @@ async def extract_issues(request: GenerateReplyRequest):
     try:
         # 返回 StreamingResponse
         return StreamingResponse(
-            content = extract_issues_from_chat(request.chat_history),
+            content = extract_issues_from_chat(request.chat_history,request.if_r1),
             media_type="text/event-stream",
         )
     except Exception as e:

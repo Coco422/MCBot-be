@@ -1,4 +1,5 @@
 import json
+import os
 from typing import AsyncIterator, List, Optional
 
 from fastapi import HTTPException
@@ -57,7 +58,7 @@ async def chat_with_llm(request: CaseChatRequest) -> AsyncIterator[str]:
         messages = []
         messages.append({"role": "user", "content": finally_input})  # 添加当前用户输入
 
-        async for chunk in get_chat_response_stream_langchain(messages, system_prompt=__system_prompt, model_name="deepseek-r1:32b-qwen-distill-q8_0",if_r1=True):
+        async for chunk in get_chat_response_stream_langchain(messages, system_prompt=__system_prompt, model_name="deepseek-r1:32b-qwen-distill-fp16",if_r1=True):
             yield chunk
     
     except json.JSONDecodeError as e:
@@ -195,9 +196,10 @@ async def generate_reply_by_llm(kb_content: List[dict], chat_history: List[dict]
         messages.append({"role": "user", "content": user_input})  # 添加当前用户输入
         # 查看是否开启R1 选择不同的模型
         if if_r1:
-            __model_name = "deepseek-r1:32b-qwen-distill-q8_0"
+            __model_name = os.getenv("R1_MODEL_NAME")
         else:
             __model_name = "gpt-4o-mini"
+        logger.debug(f"user need to use model: {__model_name}")
 
         async for chunk in get_chat_response_stream_langchain(messages, model_name=__model_name, system_prompt=__system_prompt):
             yield chunk
@@ -205,7 +207,7 @@ async def generate_reply_by_llm(kb_content: List[dict], chat_history: List[dict]
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
     
-async def extract_issues_from_chat(chat_history: List[dict]) -> AsyncIterator[str]:
+async def extract_issues_from_chat(chat_history: List[dict], if_r1: bool) -> AsyncIterator[str]:
     """
     从聊天记录中提取用户咨询问题列表
     :param chat_history: 聊天记录
@@ -244,8 +246,14 @@ async def extract_issues_from_chat(chat_history: List[dict]) -> AsyncIterator[st
 {__fix_chat_history}
 ```
 ## 开始: (最终输出仅完成任务即提取问题即可，不要在思考后输出无关内容)"""})  # 添加当前用户输入
-        
-        async for chunk in get_chat_response_stream_langchain(messages, model_name="deepseek-r1:32b-qwen-distill-q8_0", system_prompt=__system_prompt):
+        # 查看是否开启R1 选择不同的模型
+        if if_r1:
+            __model_name = os.getenv("R1_MODEL_NAME")
+        else:
+            __model_name = "gpt-4o-mini"
+        logger.debug(f"user need to use model: {__model_name}")
+
+        async for chunk in get_chat_response_stream_langchain(messages, model_name=__model_name, system_prompt=__system_prompt):
             yield chunk
 
     except Exception as e:
@@ -300,12 +308,13 @@ async def generate_extract_issues_reply_with_kb_by_ai(chat_history: List[dict], 
 {kb_content}
 ```
 ## 开始: (最终输出仅完成任务即可)以美观的 json 结构输出简体中文。包括缩进换行等
-"""})  # 添加当前用户输入
+"""})   # 添加当前用户输入
         # 查看是否开启R1 选择不同的模型
         if if_r1:
-            __model_name = "deepseek-r1:32b-qwen-distill-q8_0"
+            __model_name = os.getenv("R1_MODEL_NAME")
         else:
             __model_name = "gpt-4o-mini"
+        logger.debug(f"user need to use model: {__model_name}")
 
         async for chunk in get_chat_response_stream_langchain(messages, model_name=__model_name, system_prompt=__system_prompt):
             yield chunk
