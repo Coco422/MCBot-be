@@ -1,0 +1,554 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  height: 100vh; /* 确保 body 高度占满屏幕 */
+}
+.container {
+  display: flex;
+  height: 100vh; /* 确保容器高度占满屏幕 */
+}
+/* 左边六分田子格 */
+.grid-container {
+  flex: 2.5; /* 占据2/3的宽度 */
+  display: grid;
+  grid-template-columns: 1.3fr 1.5fr; /* 左边占1，右边占1.5 */
+  gap: 2px;
+  padding: 5px;
+  box-sizing: border-box; /* 防止 padding 影响布局 */
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+  height: 99vh; /* 父容器高度 */
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  padding: 10px;
+  box-sizing: border-box;
+  min-width: 0; /* 允许 flex 子项收缩 */
+}
+
+.right-column {
+  display: grid;
+  grid-template-rows: 1fr 1.5fr 3.5fr; /* 设置行高比例 */
+  gap: 2px; /* 行间距 */
+  height: 99vh; /* 确保父容器有明确的高度 */
+}
+
+.right-column .grid_item {
+
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  display: block;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+  white-space: normal; /* 允许换行 */
+  overflow-wrap: break-word; /* 允许在单词内换行 */
+  word-break: break-all; /* 允许在任意字符间换行 */
+  overflow: visible; /* 移除 overflow: hidden; */
+  text-overflow: clip; /* 移除 text-overflow: ellipsis; */
+  overflow-y: auto;
+  white-space: normal;
+  padding: 10px; /* 内边距 */
+  box-sizing: border-box; /* 防止 padding 影响布局 */
+}
+
+.selector-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.selector {
+  display: flex;
+  flex: 1; /* 让每个选择器占满可用空间 */
+  align-items: center;
+  gap: 10px;
+}
+
+.selector-input {
+  flex: 1; /* 让输入框占满剩余空间 */
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.name-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1; /* 让姓名标签选择器占满可用空间 */
+}
+
+.name-tag {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  flex: 1; /* 让每个姓名标签占满可用空间 */
+  text-align: center;
+  background-color: #ffffff;
+  color: #000;
+}
+
+.name-tag:hover {
+  background-color: #e0e0e0;
+}
+
+.name-tag.selected {
+  background-color: #1FDE82;
+  color: white;
+  border: none;
+}
+
+.workInformation {
+  border: 1px solid rgb(175, 175, 175);
+  margin-top: 10px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.order_message {
+  display: flex;
+}
+.order_message.left {
+  flex-direction: row;
+  padding: 8px;
+}
+.order_message.right {
+  flex-direction: row-reverse;
+  padding: 8px;
+}
+.avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background-color: #b8ddff;
+  color: white;
+  margin-right: 10px;
+  margin-left: 10px;
+  text-align: center;
+  line-height: 35px;
+}
+.avatar.right {
+  margin-right: 0;
+  margin-left: 10px;
+  margin-right: 10px;
+  background-color: #cbcccc;
+}
+.text {
+  background-color: #b8ddff;
+  padding: 10px 10px;
+  border-radius: 10px;
+  max-width: 60%; /* 设置最大宽度 */
+  word-wrap: break-word; /* 允许内容换行 */
+}
+.text.right {
+  background-color: #e9e9e9;
+  margin-right: 4px;
+}
+
+.tab-container {
+  display: flex;
+  overflow-x: auto;  /* 当按钮超出容器宽度时出现水平滚动条 */
+  padding: 5px 0;
+  margin-top: 5px;
+  min-width: 0;      /* 允许收缩 */
+  /* 隐藏 Firefox 的滚动条 */
+  scrollbar-width: none;  
+  /* 隐藏 IE 和 Edge 的滚动条 */
+  -ms-overflow-style: none;  
+}
+.tab-container::-webkit-scrollbar {
+  display: none; /* 隐藏 Chrome、Safari 和 Opera 的滚动条 */
+}
+
+.tab-button {
+  flex: 0 0 auto;       /* 防止按钮被压缩 */
+  padding: 6px 10px;
+  /* margin-right: 5px; */
+  background-color: #f1f1f1;
+  /* border-radius: 5px; */
+  cursor: pointer;
+  font-size: 16px;
+  white-space: nowrap;  /* 防止文本换行 */
+  border: 1px solid #ccc;
+  width: 40px;
+  text-align: center;
+}
+
+.active-tab {
+  background-color: #1FDE82;
+  color: white;
+  border: 0;
+}
+
+.tab-button.active-tab:hover {
+  background-color: #1FDE82; /* 保持激活状态的背景色 */
+}
+
+.tab-button:hover {
+  background-color: #e0e0e0;
+}
+
+.tabs-wrapper button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;      /* 与 .tab-button 一致 */
+  font-size: 16px;        /* 与 .tab-button 一致 */
+  cursor: pointer;
+  height: 42px;
+  margin-top: 10px;
+  background-color: #81e98e;
+  /* display: none; */
+}
+
+/* 选择包含按钮的容器，设置 flex 布局 */
+[data-wow-delay] {
+  display: flex;
+  gap: 5px; /* 可根据需要调整间距 */
+  margin-top: 5px;
+}
+
+/* 设置容器内所有按钮平均分配宽度 */
+[data-wow-delay] button {
+  flex: 1;
+  /* 如有需要，可清除现有右边距 */
+  margin-right: 0 !important;
+}
+
+ /* 限制代码块内容的宽度，允许自动换行而不超出容器 */
+ #response pre,
+ #response code {
+   white-space: pre-wrap;       /* 允许换行 */
+   word-wrap: break-word;       /* 长单词或长字符串超出时自动换行 */
+   max-width: 100%;             /* 最大宽度为容器宽度 */
+ }
+
+ .active-green, .AI-active-green{
+  color: green !important;
+}
+
+.slave-btn-container {
+  display: flex;
+  align-items: center;
+}
+
+.slave-btn {
+  margin: 0 2px;
+  background-color: #CBCCCC;
+}
+
+
+
+.chart-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.chart-button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #ffffff;
+  background-color: #1FDE82;
+  transition: background-color 0.3s ease;
+  border-radius: 0;
+}
+.chart-button:hover {
+  background-color: #3981DF;
+}
+.chart-button.active {
+  background-color: #3981DF;
+  color: white;
+  border-color: #3981DF;
+}
+.chart-container {
+  height: calc(100% - 50px);
+  width: 100%;
+  overflow: hidden;
+}
+
+#step8 {
+  /* text-indent: 2em; */
+    font-size: 16px;
+    padding-top: 20px;
+}
+
+.has-content {
+    text-indent: 2em;
+    font-size: 16px;
+    padding-top: 20px;
+    text-align: center;
+}
+
+/* 双区域布局样式 */
+.dual-panel {
+  display: flex;
+  width: 100%; /* 占满父容器宽度 */
+}
+
+/* 每个区域的样式 */
+.panel {
+  font: 18px;
+  flex: 1; /* 平分宽度 */
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 高亮选中区域的样式 */
+.panel.active {
+  background-color: #e0fae3; /* 浅蓝色背景 */
+  border-color: #00d483; /* 蓝色边框 */
+  font-weight: bold;
+}
+.panel.active_data {
+  background-color: #e0f7fa; /* 浅蓝色背景 */
+  border-color: #00bcd4; /* 蓝色边框 */
+  font-weight: bold;
+}
+.panel.knowledge {
+  background-color: #f4f98bbd; /* 浅蓝色背景 */
+  border-color: #f4f98bbd; /* 蓝色边框 */
+  font-weight: bold;
+}
+
+/* 右边聊天对话框 */
+.chat-container {
+  flex: 1; /* 占据1/3的宽度 */
+  display: flex;
+  flex-direction: column; /* 垂直排列 */
+  height: 100vh; /* 高度占满屏幕 */
+  background-color: #fff;
+  border-left: 1px solid #ccc;
+  box-sizing: border-box; /* 防止 padding 影响布局 */
+}
+
+.chat-container1 {
+  flex: 1; /* 聊天框占据剩余空间 */
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* 高度占满父容器 */
+}
+
+.chat-messages1 {
+  flex: 1; /* 消息区域占据剩余空间 */
+  overflow-y: auto; /* 允许滚动 */
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.chat-input {
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+.input-button-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#chat-input {
+  flex: 1;
+}
+
+button {
+  padding: 5px;
+  cursor: pointer;
+}
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column; /* 在小屏幕上改为垂直排列 */
+  }
+  .grid-container {
+    grid-template-columns: 1fr; /* 在小屏幕上改为1列 */
+    grid-template-rows: repeat(6, 1fr); /* 6行 */
+  }
+  .chat-container {
+    border-left: none; /* 移除左边框 */
+    border-top: 1px solid #ccc; /* 添加顶部边框 */
+    height: auto; /* 高度自适应 */
+  }
+}
+
+
+.message-text2 table {
+  width: 100%;
+  border-collapse: collapse; /* 合并边框 */
+}
+.message-text2  th, td {
+  border: 1px solid #000; /* 添加边框 */
+  padding: 8px; /* 添加内边距 */
+  text-align: left; /* 文本对齐方式 */
+}
+.message-text2 th {
+  background-color: #f2f2f2; /* 表头背景色 */
+}
+
+#send-button-knowledge{
+  display: none;
+}
+
+/* 历史记录弹框的样式 */
+.history-modal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 25%; /* 占父容器或视口宽度的75%，根据实际情况调整 */
+  height: 100%; /* 整个屏幕的高度 */
+  background-color: #fff;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+  transform: translateX(100%); /* 初始状态隐藏在右侧 */
+}
+
+/* 当添加 active 类时，弹框滑入显示 */
+.history-modal.active {
+  transform: translateX(0);
+}
+
+/* 弹框头部样式 */
+.history-modal .modal-header {
+  padding: 10px;
+  background-color: #f2f2f2;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 弹框内容区域 */
+.history-modal .modal-body {
+  /* padding: 10px; */
+  height: 55px;
+  line-height: 55px;
+}
+.modal-body ul li {
+  padding-left: 10px;
+  border-bottom: 1px solid #ccc; /* 添加下划线 */
+  cursor: pointer;
+}
+.modal-body ul li:last-child {
+  border-bottom: none; /* 最后一个不显示下划线 */
+}
+.modal-body ul li:hover {
+  background-color: #ebebeb;
+}
+
+/* 用户消息 */
+.user-message {
+  display: flex;
+  justify-content: flex-end; /* 让内容向右对齐 */
+  margin: 10px 0;
+}
+
+.user-message .avatar {
+  order: 1; /* 将头像放到右边 */
+}
+
+.user-message .message-content {
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 70%; /* 限制消息的最大宽度 */
+}
+
+/* 机器人消息 */
+.bot-message {
+  display: flex;
+  justify-content: flex-start; /* 让内容向左对齐 */
+  margin: 10px 0;
+}
+
+.bot-message .avatar {
+  order: 0; /* 将头像放到左边 */
+}
+
+.bot-message .message-content {
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 70%;
+}
+
+
+/* 初始状态：隐藏在底部 */
+#qa_messages {
+  position: fixed;
+  bottom: -100%;  /* 初始位置在视图之外 */
+  right: 0;
+  width: 28.5%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  box-sizing: border-box;
+  transition: bottom 0.3s ease;  /* 使用平滑的动画效果 */
+  z-index: 1000;  /* 确保弹框在最上层 */
+}
+
+/* 显示状态：将位置移动到视口 */
+#qa_messages.show {
+  bottom: 0;  /* 从底部弹出 */
+}
+
+/* 你可以根据需要调整消息框的样式 */
+.message-text1 {
+  margin: 5px 0;
+  cursor: pointer;
+  padding: 5px;
+  background-color: #444;
+  border-radius: 5px;
+}
+
+/* 初始状态：隐藏在底部 */
+#data_messages {
+  position: fixed;
+  bottom: -100%;  /* 初始位置在视图之外 */
+  right: 0;
+  width: 28.5%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  box-sizing: border-box;
+  transition: bottom 0.3s ease;  /* 使用平滑的动画效果 */
+  z-index: 1000;  /* 确保弹框在最上层 */
+}
+
+/* 显示状态：将位置移动到视口 */
+#data_messages.show {
+  bottom: 0;  /* 从底部弹出 */
+}
+/* 初始状态：隐藏在底部 */
+#knowledge_data_messages {
+  position: fixed;
+  bottom: -100%;  /* 初始位置在视图之外 */
+  right: 0;
+  width: 28.5%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  box-sizing: border-box;
+  transition: bottom 0.3s ease;  /* 使用平滑的动画效果 */
+  z-index: 1000;  /* 确保弹框在最上层 */
+}
+
+/* 显示状态：将位置移动到视口 */
+#knowledge_data_messages.show {
+  bottom: 0;  /* 从底部弹出 */
+}
+
+.message-text code {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
