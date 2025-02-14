@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  lgbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lgbot_img:0.0.1
+    container_name: LGBot
+    ports:
+      - "6689:6689"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    restart: unless-stopped
