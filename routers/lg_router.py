@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import StreamingResponse
-from models.lg_models import CaseIdResponse, CaseInfoResponse, CaseChatRequest, GenerateReplyRequest, GenerateExtractIssuesReplyRequest
+from models.lg_models import CaseIdResponse, CaseInfoResponse, CaseChatRequest, ForwardAiRequest, ForwardEmbedRequest, GenerateReplyRequest, GenerateExtractIssuesReplyRequest
 from services.lg_service import (
     chat_with_llm, 
     get_case_ids_from_db, 
@@ -10,6 +10,8 @@ from services.lg_service import (
     extract_issues_from_chat, 
     generate_extract_issues_reply_with_kb_by_ai
     )
+from tools.embedding_service import embedding_service
+from tools import openai_chat
 from typing import List
 
 # Create a new router with the /lg prefix
@@ -107,5 +109,30 @@ async def generate_extract_issues_reply_with_kb(request: GenerateExtractIssuesRe
             content = generate_extract_issues_reply_with_kb_by_ai(request.chat_history, request.issues, request.if_r1, request.kb_content),
             media_type="text/event-stream",
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@lg_router.post("/forward_ai")
+async def forward_post(request: ForwardAiRequest):
+    # 转发 post 请求到 AI 服务 去掉前缀 
+    try:
+        # 返回 StreamingResponse
+        return StreamingResponse(
+            content = openai_chat.get_chat_response_stream_langchain(request.messages, 
+                                                                     request.system_prompt, 
+                                                                     request.model_name, 
+                                                                     request.if_r1),
+            media_type="text/event-stream",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@lg_router.post("/forward_embed")
+async def forward_embed_post(request: ForwardEmbedRequest):
+        # 转发 post 请求到 embed 服务 去掉前缀 
+    try:
+        result = await embedding_service.get_embedding(text=request.msg)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

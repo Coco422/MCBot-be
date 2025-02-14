@@ -1,5 +1,6 @@
 import httpx
 from langchain_openai import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
 from services.chat_tools_impl import tools
 from services.chat_tools_pydantic import tools_parse
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
@@ -205,17 +206,28 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     # 模型名根据传入参数从环境变量中获取，如果环境变量中没有则直接使用传入的参数
     model_name = os.getenv(model_name) if os.getenv(model_name) else model_name
     logger.info(model_name)
-    # 初始化 LangChain 的 ChatOpenAI
-    llm = ChatOpenAI(
-        model=model_name,
-        temperature=0,
-        max_tokens=None,
-        timeout=None,
-        max_retries=2,
-        api_key=os.getenv("ray_ai_api_key_default"),
-        base_url=os.getenv("ray_ai_base_url"),
-    )
-        
+    if if_r1:
+        # 针对 deepseek r1 系列的 reasoning_content 额外参数的处理
+        llm = ChatDeepSeek(
+            model=model_name,
+            temperature=0,
+            max_tokens=None,
+            timeout=None,
+            max_retries=2,
+            api_key=os.getenv("ray_ai_api_key_default"),
+            api_base=os.getenv("ray_ai_base_url"),
+        )
+    else:
+        # 初始化 LangChain 的 ChatOpenAI
+        llm = ChatOpenAI(
+            model=model_name,
+            temperature=0,
+            max_tokens=None,
+            timeout=None,
+            max_retries=2,
+            api_key=os.getenv("ray_ai_api_key_default"),
+            base_url=os.getenv("ray_ai_base_url"),
+        )
     # 假如方法中传入参数system prompt 则在 messages 最前面加上，否则加上默认提示词
     if not system_prompt and messages[0]["role"] != "system":
         system_message = {
@@ -236,7 +248,11 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     readable_start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + f".{int(start_time * 1000) % 1000:03d}"
     logger.info(f"now begin stream llm: {readable_start_time}")
     flag = 1
-    completion = llm.astream(messages, stream_usage=True)
+    r1_think_flag = 0
+    if if_r1:
+        completion = llm.astream(messages)
+    else:
+        completion = llm.astream(messages, stream_usage=True)
     # 获取流式响应（异步生成器）
     async for chunk in completion:
         if flag == 1:
@@ -248,18 +264,45 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
             full = chunk
             flag=0
         full += chunk
-        yield f"event:update\ndata:{chunk.content}\n\n" # 假设 AIMessageChunk 有 content 属性
+
+        if if_r1:
+            if r1_think_flag==0:
+                yield f"event:update\ndata:<think>\n\n"
+                r1_think_flag=1
+                print("开始思考")
+
+            if chunk.content and r1_think_flag==2:
+                r1_think_flag=3
+                yield f"event:update\ndata:</think>\n\n"
+                print("结束思考")
+
+            if r1_think_flag==2 or chunk.additional_kwargs.get("reasoning_content"):
+                r1_think_flag=2
+                yield f"event:update\ndata:{chunk.additional_kwargs.get('reasoning_content')}\n\n"
+                
+            if r1_think_flag==3:
+                yield f"event:update\ndata:{chunk.content}\n\n"
+        else:
+            yield f"event:update\ndata:{chunk.content}\n\n" # 假设 AIMessageChunk 有 content 属性
+
     end_time = time.time()
     readable_ft_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time)) + f".{int(end_time * 1000) % 1000:03d}"
     time_diff_ms = (end_time - start_time) * 1000  # 转换为毫秒
     logger.info(f"when we get all token from llm: {readable_ft_time}")
     logger.info(f"all out put Consume time: {time_diff_ms:.2f} ms")
-    response_dict = {
-    "content": full.content,
-    "response_metadata": full.response_metadata,
-    "usage_metadata": full.usage_metadata,
-    "time_consuming": f"{time_diff_ms:.2f}"
-    }
+    if if_r1:
+        response_dict = {
+            "content": full.content,
+            "response_metadata": full.response_metadata,
+            "time_consuming": f"{time_diff_ms:.2f}"
+        }
+    else:
+        response_dict = {
+        "content": full.content,
+        "response_metadata": full.response_metadata,
+        "usage_metadata": full.usage_metadata,
+        "time_consuming": f"{time_diff_ms:.2f}"
+        }
     # 将字典转换为 JSON 字符串
     json_string = json.dumps(response_dict, ensure_ascii=False)
     yield f"event: Done\ndata:{json_string}\n\n"

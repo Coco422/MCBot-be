@@ -1,6 +1,6 @@
 import datetime
 from pydantic import BaseModel,Field
-from typing import Optional, List, Any
+from typing import Dict, Optional, List, Any
 
 # --- Pydantic Models ---
 class CaseIdResponse(BaseModel):
@@ -62,3 +62,18 @@ class GenerateExtractIssuesReplyRequest(BaseModel):
     issues: Optional[List[str]] = Field(None, description="总结出来的问题")
     kb_content: Optional[str] = Field(None, description="知识库内容")
     if_r1: Optional[bool] = Field(True, description="是否开启 R1")
+
+class ForwardAiRequest(BaseModel):
+    """
+    /lg/forward_ai 接口的请求体模型
+    """
+    messages: List[Dict[str, str]] = Field(..., description="消息列表")
+    system_prompt: Optional[str] = Field(None, description="系统提示词")
+    model_name: Optional[str] = Field(None, description="模型名称")
+    if_r1: Optional[bool] = Field(True, description="是否开启 R1")
+
+class ForwardEmbedRequest(BaseModel):
+    """
+    /lg/forward_embed 接口
+    """
+    msg: str = Field(...,description="需要嵌入的字符串")

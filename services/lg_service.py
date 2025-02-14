@@ -25,7 +25,6 @@ async def chat_with_llm(request: CaseChatRequest) -> AsyncIterator[str]:
     :param request: 前端发送的内容
     :return: 返回一个异步迭代器，每次迭代返回一个聊天结果的片段
     """
-    connection = None
     try:
 
         # 构建系统提示词 先从数据库获取 case info
@@ -58,7 +57,7 @@ async def chat_with_llm(request: CaseChatRequest) -> AsyncIterator[str]:
         messages = []
         messages.append({"role": "user", "content": finally_input})  # 添加当前用户输入
 
-        async for chunk in get_chat_response_stream_langchain(messages, system_prompt=__system_prompt, model_name="deepseek-r1:32b-qwen-distill-fp16",if_r1=True):
+        async for chunk in get_chat_response_stream_langchain(messages, system_prompt=__system_prompt, model_name=os.getenv("R1_MODEL_NAME"),if_r1=True):
             yield chunk
     
     except json.JSONDecodeError as e:
