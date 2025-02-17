@@ -30,7 +30,7 @@ class CaseChatRequest(BaseModel):
     user_input: str = Field(..., description="用户输入的内容")
     chat_type: Optional[int] = Field(0, description="对话类型 0: 一般对话 1: 知识库问答对话 2: 评价")
     if_kb: Optional[bool] = Field(False, description="是否开启知识库查询")
-
+    if_r1: Optional[bool] = Field(True, description="是否开启深度思考")
     case_id: Optional[str] = Field(None, description="工单 ID")
     case_date_begin: Optional[str] = Field(None, description="工单日期 开始")
     case_date_end: Optional[str] = Field(None, description="工单日期 结束")
