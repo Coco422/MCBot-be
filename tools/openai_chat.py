@@ -206,6 +206,9 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     # 模型名根据传入参数从环境变量中获取，如果环境变量中没有则直接使用传入的参数
     model_name = os.getenv(model_name) if os.getenv(model_name) else model_name
     logger.info(model_name)
+    if not os.getenv("GLOBAL_R1")=="True":
+        if_r1=False
+
     if if_r1:
         # 针对 deepseek r1 系列的 reasoning_content 额外参数的处理
         llm = ChatDeepSeek(
@@ -249,6 +252,7 @@ async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], sys
     logger.info(f"now begin stream llm: {readable_start_time}")
     flag = 1
     r1_think_flag = 0
+    
     if if_r1:
         completion = llm.astream(messages)
     else:

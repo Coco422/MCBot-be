@@ -8,10 +8,9 @@ from models.lg_models import (CaseChatRequest,
                               )
 from database.connection import get_db_connection, release_db_connection
 from tools.embedding_service import embedding_service
-
+from tools.openai_chat import get_chat_response_stream_langchain
 
 # ----------配置日志-------------
-from tools.openai_chat import get_chat_response_stream_langchain
 from tools.ray_logger import LoggerHandler
 log_file = "main.log"
 logger = LoggerHandler(logger_level='DEBUG',file="logs/"+log_file)
@@ -64,7 +63,7 @@ async def chat_with_llm(request: CaseChatRequest) -> AsyncIterator[str]:
         logger.error("json 解析失败")
         pass
     except Exception as e:
-        raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
+        raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {e}")
 
 async def get_case_ids_from_db(creatby: str, createtime_start: str, createtime_end: str) -> List[str]:
     connection = None
@@ -197,7 +196,7 @@ async def generate_reply_by_llm(kb_content: List[dict], chat_history: List[dict]
         if __if_r1:
             __model_name = os.getenv("R1_MODEL_NAME")
         else:
-            __model_name = "gpt-4o-mini"
+            __model_name = os.getenv("ai_chat_model")
         logger.debug(f"user need to use model: {__model_name}")
 
         async for chunk in get_chat_response_stream_langchain(messages, model_name=__model_name, system_prompt=__system_prompt,if_r1=__if_r1):
@@ -249,7 +248,7 @@ async def extract_issues_from_chat(chat_history: List[dict], __if_r1: bool) -> A
         if __if_r1:
             __model_name = os.getenv("R1_MODEL_NAME")
         else:
-            __model_name = "gpt-4o-mini"
+            __model_name = os.getenv("ai_chat_model")
         logger.debug(f"user need to use model: {__model_name}")
 
         async for chunk in get_chat_response_stream_langchain(messages, model_name=__model_name, system_prompt=__system_prompt,if_r1=__if_r1):
@@ -312,7 +311,7 @@ async def generate_extract_issues_reply_with_kb_by_ai(chat_history: List[dict], 
         if __if_r1:
             __model_name = os.getenv("R1_MODEL_NAME")
         else:
-            __model_name = "gpt-4o-mini"
+            __model_name = os.getenv("ai_chat_model")
         logger.debug(f"user need to use model: {__model_name}")
 
         async for chunk in get_chat_response_stream_langchain(messages, model_name=__model_name, system_prompt=__system_prompt,if_r1=__if_r1):
