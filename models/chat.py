@@ -6,7 +6,7 @@ class ChatTrainRequest(BaseModel):
     /chat/train 接口的请求体模型
     """
     user_input: str = Field(..., description="用户输入的内容")
-    if_kb: Optional[bool] = Field(False, description="是否开启知识库查询")
+    if_kb: Optional[bool] = Field(False, description="是否开启问答知识库查询")
     if_stream: Optional[bool] = Field(True, description="是否开启流式返回")
     question_id: Optional[int] = Field(None, description="当前询问问题 id")
     chat_id: Optional[str] = Field(
@@ -17,6 +17,8 @@ class ChatTrainRequest(BaseModel):
     lows: Optional[List[str]] = Field(None, description="相关法条（可选）")
     question: Optional[str] = Field(None, description="题目内容（可选）")
     options: Optional[List[str]] = Field(None, description="题目选项（可选）")
+    if_r1: Optional[bool] = Field(True, description="是否开启 R1")
+    if_user_kb: Optional[bool] = Field(True, description="是否开启用户知识库")
 
 class ChatAnalysisRequest(BaseModel):
     """

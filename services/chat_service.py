@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import HTTPException
 import time
 
@@ -76,7 +77,7 @@ async def rag_search(question: str) -> List[dict]:
     """Perform RAG search using embedding service"""
     # Get embedding for the question
     embedding = await embedding_service.get_embedding(question)
-    
+    # logger.debug(f"Embedding for question: {embedding}")
     # Search for similar content in database
     results = await embedding_service.search_similar(embedding)
     
@@ -357,11 +358,20 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
         chat_id = request.chat_id
         # 加载历史消息
         history = get_chat_history(chat_id)
-
-        # 判断是否开启 RAG
+        finally_input = request.user_input
+        __if_kb = False
         if request.if_kb:
+            __if_kb = True
+        elif request.if_user_kb:
+            __if_kb = True
+        else:
+            __if_kb = False
+        
+        # 判断是否开启 RAG
+        if __if_kb:
             try:
                 # 先获取用户当前的题目信息
+                logger.warning(f"针对用户当前的题目id: {request.question_id} 检索相关内容")
                 # 根据id 查询题目信息
                 question_option_info_full = get_random_question(request.question_id)
                 # 构建 RAG 用的 题目和选项
@@ -395,6 +405,7 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
                 finally_input = user_input_with_kb
             except:
                 # 如果问题id出错
+                logger.warning("问题id出错，对用户输入进行 rag 搜索")
                 # 调用RAG搜索
                 rag_question_low_results = await rag_search(request.user_input)
                 # 格式化RAG结果
@@ -407,7 +418,10 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
                     f"相似度: {result['similarity']:.2f}\n"
                     for i, result in enumerate(rag_question_low_results)
                 )
+                # logger.info(rag_context)
+                logger.info("返回rag结果")
                 yield f"event:rag\n{rag_context}\n\n"
+
                 user_input_with_kb = f"""
 相关文档:
 {rag_context}
@@ -419,15 +433,17 @@ async def chat_with_ai(request: ChatTrainRequest) -> AsyncIterator[str]:
 {request.user_input}
 """         
                 finally_input = user_input_with_kb
-        else:
-            finally_input = request.user_input
           
         await add_message_to_chat(chat_id, "user", request.user_input)
         # 构造消息列表
         messages = history.copy()  # 复制历史消息
         messages.append({"role": "user", "content": finally_input})  # 添加当前用户输入
-
-        async for chunk in get_chat_response_stream_langchain(messages,system_prompt=DEFAULT_SYSTEM_PROMPT):
+        if request.if_r1:
+            model_name = os.getenv("R1_MODEL_NAME")
+        else:
+            model_name = os.getenv("ai_chat_model")
+        logger.debug(f"user need to use model: {model_name}")
+        async for chunk in get_chat_response_stream_langchain(messages,system_prompt=DEFAULT_SYSTEM_PROMPT,model_name=model_name):
             yield chunk
     
         full_response = chunk

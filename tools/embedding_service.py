@@ -66,7 +66,7 @@ class EmbeddingService:
         # If all retries fail, return None
         return None
     
-    async def search_similar(self, embedding: List[float], top_k: int = 3) -> List[dict]:
+    async def search_similar(self, embedding: List[float], top_k: int = 5) -> List[dict]:
         """Search for similar content in database using embedding vector"""
         conn = None
         try:
@@ -78,7 +78,7 @@ class EmbeddingService:
             
             # Updated query to call the stored procedure
             query = """
-            SELECT * FROM "tobacco"."use_vec_get_top_laws"(%s::public.vector)
+            SELECT * FROM "tobacco"."get_top5_laws_by_quevec"(%s::public.vector)
             LIMIT %s;
             """
             cursor.execute(query, (embedding_array, top_k))
@@ -90,11 +90,7 @@ class EmbeddingService:
                 "law_name": row[1],
                 "chapter": row[2],
                 "article_content": row[3],
-                "referenced_article_1": row[4],
-                "referenced_article_content_1": row[5],
-                "referenced_article_2": row[6],
-                "referenced_article_content_2": row[7],
-                "similarity": float(row[8])
+                "similarity": float(row[4])
             } for row in results]
             
         except Exception as e:

@@ -47,6 +47,7 @@ app.include_router(lg_router)  # Add the new router
 # 挂载静态文件目录到根路径
 app.mount("/", StaticFiles(directory="html", html=True), name="static")
 
+app.mount("/miniai", StaticFiles(directory="html/miniai", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
