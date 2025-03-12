@@ -51,5 +51,6 @@ app.mount("/miniai", StaticFiles(directory="html/miniai", html=True), name="stat
 
 if __name__ == "__main__":
     import uvicorn
+    # uvicorn app:app --host 0.0.0.0 --port 6688
     # uvicorn.run(app, host="0.0.0.0", port=5575, ssl_certfile='./cert.pem', ssl_keyfile='./key.pem') # not useful
     uvicorn.run(app, host="0.0.0.0", port=6688)

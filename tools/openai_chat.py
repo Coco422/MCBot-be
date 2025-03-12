@@ -28,7 +28,7 @@ async def get_chat_response_stream_httpx(messages: List[Dict[str, str]], system_
     """
     api_key=os.getenv("ray_ai_api_key_default")
     base_url=os.getenv("ray_ai_base_url")
-    model_id=os.getenv("hw_ai_chat_model_72")
+    model_id=os.getenv("ai_chat_model")
 
 
     # 假如方法中传入参数 system prompt 则在 messages 最前面加上，否则加上默认提示词
@@ -107,7 +107,7 @@ async def get_chat_response_stream_asyoai(messages: List[Dict[str, str]], system
     
     api_key=os.getenv("ray_ai_api_key_default")
     base_url=os.getenv("ray_ai_base_url")
-    model_id=os.getenv("hw_ai_chat_model_72")
+    model_id=os.getenv("ai_chat_model")
 
         # 假如方法中传入参数 system prompt 则在 messages 最前面加上，否则加上默认提示词
     if not system_prompt and messages[0]["role"] != "system":
@@ -147,7 +147,7 @@ async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str =
     :param if_json: 是否返回JSON格式的响应，如果为True则解析并返回SQL或SQL键的值
     :return: 返回完整的聊天响应内容或解析后的SQL语句
     """
-    model_name = os.getenv("hw_ai_chat_model_72")
+    model_name = os.getenv("ai_chat_model")
     logger.info(f"Using model: {model_name}")
     
     # 初始化 LangChain 的 ChatOpenAI
@@ -197,7 +197,7 @@ async def get_chat_response(messages: List[Dict[str, str]], system_prompt: str =
         logger.error(f"Error getting chat response: {str(e)}")
         raise
 
-async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "", model_name: str="hw_ai_chat_model_32", if_r1: bool=False) -> AsyncIterator[str]:
+async def get_chat_response_stream_langchain(messages: List[Dict[str, str]], system_prompt: str = "", model_name: str="ai_chat_model", if_r1: bool=False) -> AsyncIterator[str]:
     """
     获取 OpenAI 聊天模型的流式响应
     :param messages: 聊天消息列表，格式为 [{"role": "system"|"user"|"assistant", "content": "消息内容"}, ...]

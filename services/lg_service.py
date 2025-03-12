@@ -1,7 +1,7 @@
 import json
 import os
 from typing import AsyncIterator, List, Optional
-
+from fastapi.responses import StreamingResponse
 from fastapi import HTTPException
 from models.lg_models import (CaseChatRequest,  
                               CaseInfoResponse,  
@@ -319,3 +319,7 @@ async def generate_extract_issues_reply_with_kb_by_ai(chat_history: List[dict], 
 
     except Exception as e:
         raise HTTPException(status_code=5000, detail=f"AI 模块错误，请联系管理员: {str(e)}")
+
+
+import asyncio
+from fastapi import HTTPException
