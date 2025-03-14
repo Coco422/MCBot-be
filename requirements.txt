@@ -3,6 +3,7 @@ pydantic
 uvicorn
 langchain_openai
 langchain_core
+langchain_deepseek
 transformers
 python-dotenv
 psycopg2-binary

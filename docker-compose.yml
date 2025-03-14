@@ -1,0 +1,69 @@
+services:
+  MCBot:
+    image: mcbot/amd64:v0.0.1  # 在构建时指定镜像名称和标签
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: MCBot
+    volumes:
+      - .:/app      # 将项目目录挂载到容器的 /app 目录，方便开发调试
+      - ./logs:/app/logs # 挂载logs目录
+      # 挂载时间
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - "${PORT}:6688"
+    # depends_on:
+      # - db        # 声明依赖关系，确保数据库服务先启动 (目前只是占位，后续添加数据库服务时需要配置)
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:6688/health"] # 使用环境变量
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "6688"] # 使用环境变量
+
+  # nginx:
+  #   image: nginx:latest
+  #   container_name: MCBot_nginx
+  #   ports:
+  #     - "${PORT}:80"
+  #     - "${SSLPORT}:443"
+  #   volumes:
+  #     - ./nginx/conf.d:/etc/nginx/conf.d
+  #     - ./nginx/ssl:/etc/nginx/ssl
+  #     - ./nginx/logs:/var/log/nginx
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   restart: always
+  #   depends_on:
+  #     - MCBot
+
+  # db:
+    # 这是一个占位服务，后续添加数据库容器时需要替换成真实的数据库镜像和配置
+    # 例如：
+    # image: postgres:13-alpine
+    # environment:
+    #   - POSTGRES_USER=user
+    #   - POSTGRES_PASSWORD=password
+    #   - POSTGRES_DB=mydatabase
+    # volumes:
+    #   - postgres_data:/var/lib/postgresql/data
+    # ports:
+    #  - 5432:5432
+    # networks:
+    #  - my_network
+    # image: "pgvector/pgvector:16"
+    # restart: always
+    # environment:
+    #   POSTGRES_USER: user
+    #   POSTGRES_PASSWORD: password
+    #   POSTGRES_DB: mydatabase
+    # ports:
+    #   - 5432:5432
+    # volumes:
+    #   - postgres_data:/var/lib/postgresql/data
+    
+# volumes:
+  # postgres_data:  # 定义一个数据卷，用于持久化数据库数据

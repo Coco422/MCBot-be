@@ -36,6 +36,11 @@ app.add_middleware(
     allow_headers=["*"],  # 允许所有请求头，也可以指定具体的请求头
 )
 
+# 健康检查接口
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 # 将路由器添加到应用
 app.include_router(api_router)
 
@@ -51,6 +56,4 @@ app.mount("/miniai", StaticFiles(directory="html/miniai", html=True), name="stat
 
 if __name__ == "__main__":
     import uvicorn
-    # uvicorn app:app --host 0.0.0.0 --port 6688
-    # uvicorn.run(app, host="0.0.0.0", port=5575, ssl_certfile='./cert.pem', ssl_keyfile='./key.pem') # not useful
     uvicorn.run(app, host="0.0.0.0", port=6688)
